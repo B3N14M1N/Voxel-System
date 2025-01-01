@@ -93,7 +93,7 @@ public class ChunkJob
             {
                 //Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
 
-                // if the flags wants a collider, continue generating
+                // if the flags wants a collider, continue _generating
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
                 {
                     chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref chunk.HeightMap);
@@ -101,7 +101,7 @@ public class ChunkJob
                     ColliderGenerated = false;
                 }
 
-                // if the flags wants a mesh, continue generating
+                // if the flags wants a mesh, continue _generating
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
                     //chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap);

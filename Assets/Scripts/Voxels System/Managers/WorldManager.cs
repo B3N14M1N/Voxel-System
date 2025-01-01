@@ -18,7 +18,7 @@ public class WorldManager : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         var UpdateTime = Time.realtimeSinceStartup;
         playerChunkPosition = WorldSettings.ChunkPositionFromPosition(player.transform.position);

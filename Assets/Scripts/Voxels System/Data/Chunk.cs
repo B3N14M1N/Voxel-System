@@ -290,7 +290,7 @@ public class Chunk
         ClearMeshAndCollider();
 
         if (chunkInstance != null)
-            chunkInstance.name = "Chunk Instance [pool]";
+            chunkInstance.name = "Chunk Instance [_pool]";
 
         this.Active = false;
     }

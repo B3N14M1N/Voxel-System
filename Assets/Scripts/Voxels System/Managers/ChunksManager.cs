@@ -46,6 +46,7 @@ public class ChunksManager : MonoBehaviour, IChunksManager
         {
             pool.Enqueue(NewChunk);
         }
+
         GenerateChunksPositionsCheck();
     }
 
@@ -74,7 +75,7 @@ public class ChunksManager : MonoBehaviour, IChunksManager
                 flags = ChunkGenerationFlags.Data | ChunkGenerationFlags.Collider | ChunkGenerationFlags.Mesh,
             };
 
-            //bool simulate = ChunksPositionCheck[i].y <= PlayerSettings.SimulateDistance * PlayerSettings.SimulateDistance;
+            //bool simulate = _chunksPositionCheck[i].y <= PlayerSettings.SimulateDistance * PlayerSettings.SimulateDistance;
 
             if (cached.TryGetValue(key, out Chunk chunk))
             {
@@ -103,7 +104,7 @@ public class ChunksManager : MonoBehaviour, IChunksManager
         {
             ChunksToClear.Enqueue(cached[key]);
             cached.Remove(key);
-            //ClearChunkAndEnqueue(key, ref cached);
+            //ClearChunkAndEnqueue(key, ref _cached);
         }
 
         foreach (var key in cached.Keys)
@@ -113,6 +114,7 @@ public class ChunksManager : MonoBehaviour, IChunksManager
 
         AvgCounter.UpdateCounter(ChunksManagerLoopString, (Time.realtimeSinceStartup - UpdateTime) * 1000f);
     }
+
     public void LateUpdate()
     {
         if(ChunksToClear.Count > 0)
