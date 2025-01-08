@@ -7,6 +7,7 @@ using Unity.Mathematics;
 using UnityEngine.Rendering;
 using UnityEngine;
 using System.Threading;
+using VoxelSystem.Managers;
 
 public class ChunkMeshGenerator
 {
@@ -14,9 +15,14 @@ public class ChunkMeshGenerator
     private JobHandle jobHandle;
     private MeshDataStruct meshData;
     public bool IsComplete => jobHandle.IsCompleted;
+    private readonly IChunksManager _chunksManager;
 
-    public ChunkMeshGenerator(GenerationData generationData, ref NativeArray<Voxel> voxels, ref NativeArray<HeightMap> map)
+    public ChunkMeshGenerator(GenerationData generationData,
+        ref NativeArray<Voxel> voxels,
+        ref NativeArray<HeightMap> map,
+        IChunksManager chunksManager)
     {
+        _chunksManager = chunksManager;
         GenerationData = generationData;
         meshData.Initialize();
 
@@ -37,7 +43,7 @@ public class ChunkMeshGenerator
         if (IsComplete)
         {
             jobHandle.Complete();
-            Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
             if (chunk != null)
             {
                 var mesh = meshData.GenerateMesh();
@@ -318,6 +324,7 @@ public class ChunkParallelMeshGenerator
     private JobHandle jobHandle;
     private MeshDataStruct meshData;
     public bool IsComplete => jobHandle.IsCompleted;
+    private readonly IChunksManager _chunksManager;
     #region Allocations
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
@@ -399,8 +406,12 @@ public class ChunkParallelMeshGenerator
     };
     #endregion
 
-    public ChunkParallelMeshGenerator(GenerationData generationData, ref NativeArray<Voxel> voxels, ref NativeArray<HeightMap> map)
+    public ChunkParallelMeshGenerator(GenerationData generationData,
+        ref NativeArray<Voxel> voxels,
+        ref NativeArray<HeightMap> map,
+        IChunksManager chunksManager)
     {
+        _chunksManager = chunksManager;
         GenerationData = generationData;
         meshData.Initialize();
 
@@ -426,7 +437,7 @@ public class ChunkParallelMeshGenerator
         if (IsComplete)
         {
             jobHandle.Complete();
-            Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
             if (chunk != null)
             {
                 var mesh = meshData.GenerateMesh();
@@ -455,7 +466,7 @@ public class ChunkParallelMeshGenerator
         if (FaceCheck != null && FaceCheck.IsCreated) FaceCheck.Dispose();
         if (FaceVerticeIndex != null && FaceVerticeIndex.IsCreated) FaceVerticeIndex.Dispose();
         if (VerticeUVs != null && VerticeUVs.IsCreated) VerticeUVs.Dispose();
-        if (FaceIndices!= null && FaceIndices.IsCreated) FaceIndices.Dispose();
+        if (FaceIndices != null && FaceIndices.IsCreated) FaceIndices.Dispose();
     }
     #endregion
 }
@@ -475,7 +486,7 @@ public struct ChunkParallelMeshJob : IJobParallelFor
     [ReadOnly]
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<int> FaceVerticeIndex;    
+    public NativeArray<int> FaceVerticeIndex;
     [ReadOnly]
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
@@ -538,19 +549,19 @@ public struct ChunkParallelMeshJob : IJobParallelFor
             case 1:
             case 2:
             case 3:
-            {
-               face = 1; break;
-            }
+                {
+                    face = 1; break;
+                }
             case 4:
-            {
-                face = 0;
-                break;
-            }
+                {
+                    face = 0;
+                    break;
+                }
             case 5:
-            {
-                face = 2;
-                break;
-            }
+                {
+                    face = 2;
+                    break;
+                }
         }
         z += (byte)face;
         z <<= 8;

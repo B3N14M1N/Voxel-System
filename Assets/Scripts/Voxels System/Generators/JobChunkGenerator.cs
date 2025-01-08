@@ -12,8 +12,8 @@ public class JobChunkGenerator
     public NativeArray<HeightMap> heightMaps;
     public MeshDataStruct meshData;
     public Vector3 chunkPos;
-    private NativeArray<NoiseParameters> noiseParameters;
-    private NativeArray<Vector2Int> octaveOffsets;
+    private NativeArray<NoiseParameters> _noiseParameters;
+    private NativeArray<Vector2Int> _octaveOffsets;
     private float globalScale;
 
     public bool GenerationStarted { get; private set; }
@@ -26,15 +26,15 @@ public class JobChunkGenerator
 
     public JobHandle meshHandle;
 
-    public JobChunkGenerator(Vector3 chunkPos, NoiseParameters[] noiseParameters, Vector2Int[] octaveOffsets, float globalScale)
+    public JobChunkGenerator(Vector3 chunkPos, NoiseParameters[] _noiseParameters, Vector2Int[] _octaveOffsets, float globalScale)
     {
         this.chunkPos = chunkPos;
         this.globalScale = globalScale;
         GenerationStarted = false;
         DataGenerated = false;
         MeshGenerated = false;
-        this.noiseParameters = new NativeArray<NoiseParameters>(noiseParameters, Allocator.Persistent);
-        this.octaveOffsets = new NativeArray<Vector2Int>(octaveOffsets, Allocator.Persistent);
+        this._noiseParameters = new NativeArray<NoiseParameters>(_noiseParameters, Allocator.Persistent);
+        this._octaveOffsets = new NativeArray<Vector2Int>(_octaveOffsets, Allocator.Persistent);
         ScheduleDataGeneration();
         Processed += 1;
     }
@@ -66,8 +66,8 @@ public class JobChunkGenerator
                 voxels = this.voxels,
                 heightMaps = this.heightMaps,
                 chunkPos = this.chunkPos,
-                noiseParameters = this.noiseParameters,
-                octaveOffsets = this.octaveOffsets.Reinterpret<int2>(),
+                _noiseParameters = this._noiseParameters,
+                _octaveOffsets = this._octaveOffsets.Reinterpret<int2>(),
                 globalScale = this.globalScale,
             };
             GenerationStarted = true;
@@ -131,8 +131,8 @@ public class JobChunkGenerator
         dataHandle.Complete();
         meshHandle.Complete();
         meshData.Dispose();
-        if (noiseParameters.IsCreated) noiseParameters.Dispose();
-        if (octaveOffsets.IsCreated) octaveOffsets.Dispose();
+        if (_noiseParameters.IsCreated) _noiseParameters.Dispose();
+        if (_octaveOffsets.IsCreated) _octaveOffsets.Dispose();
         if (disposeData)
         {
             if (voxels.IsCreated) voxels.Dispose();
@@ -157,10 +157,10 @@ public struct ChunkDataJob : IJobParallelFor
     public float3 chunkPos;
     [ReadOnly]
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<NoiseParameters> noiseParameters;
+    public NativeArray<NoiseParameters> _noiseParameters;
     [ReadOnly]
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<int2> octaveOffsets;
+    public NativeArray<int2> _octaveOffsets;
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
@@ -181,11 +181,11 @@ public struct ChunkDataJob : IJobParallelFor
 
         float fHeight = 0;
         int sampleX = (int)chunkPos.x * chunkWidth + x - 1, sampleZ = (int)chunkPos.z * chunkWidth + z - 1;
-        for (int i = 0; i < noiseParameters.Length; i++)
+        for (int i = 0; i < _noiseParameters.Length; i++)
         {
-            fHeight += GetHeight(sampleX, sampleZ, noiseParameters[i]);
+            fHeight += GetHeight(sampleX, sampleZ, _noiseParameters[i]);
         }
-        height = Mathf.FloorToInt(fHeight / noiseParameters.Length * (chunkHeight - 1));
+        height = Mathf.FloorToInt(fHeight / _noiseParameters.Length * (chunkHeight - 1));
 
         if (height <= 0)
             height = 1;
@@ -218,8 +218,8 @@ public struct ChunkDataJob : IJobParallelFor
         float max = 0;
         for (int i = 0; i < param.octaves; i++)
         {
-            float sampleX = (x + octaveOffsets[i].x) / param.noiseScale / globalScale * frequency;
-            float sampleZ = (z + octaveOffsets[i].y) / param.noiseScale / globalScale * frequency;
+            float sampleX = (x + _octaveOffsets[i].x) / param.noiseScale / globalScale * frequency;
+            float sampleZ = (z + _octaveOffsets[i].y) / param.noiseScale / globalScale * frequency;
 
             float value = Mathf.PerlinNoise(sampleX, sampleZ);
             height += value * amplitude / param.damping;

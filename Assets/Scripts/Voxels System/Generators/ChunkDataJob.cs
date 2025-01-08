@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using VoxelSystem.Managers;
 
 
 public class ChunkDataGenerator
@@ -16,11 +17,13 @@ public class ChunkDataGenerator
     private float globalScale;
     private JobHandle jobHandle;
     public bool IsComplete => jobHandle.IsCompleted;
+    private readonly IChunksManager _chunksManager;
 
     public ChunkDataGenerator(GenerationData generationData,
         NoiseParameters[] noiseParameters,
         Vector2Int[] octaveOffsets,
-        float globalScale)
+        float globalScale,
+        IChunksManager chunksManager)
     {
         GenerationData = generationData;
         this.globalScale = globalScale;
@@ -40,6 +43,7 @@ public class ChunkDataGenerator
             globalScale = this.globalScale,
         };
         jobHandle = dataJob.Schedule(HeightMap.Length, 1);
+        _chunksManager = chunksManager;
         //Debug.Log("Scheduled: " + HeightMap.Length);
     }
 
@@ -49,7 +53,7 @@ public class ChunkDataGenerator
         if (IsComplete)
         {
             jobHandle.Complete();
-            Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
             if (chunk != null)
             {
                 chunk.UploadData(ref Voxels, ref HeightMap);

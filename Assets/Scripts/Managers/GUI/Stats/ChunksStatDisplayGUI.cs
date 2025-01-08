@@ -1,13 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Profiling;
 using UnityEngine.UI;
+using VoxelSystem.Managers;
+using Zenject;
 
 public class ChunksStatDisplayGUI : MonoBehaviour, IStatDisplay
 {
+    [Inject] private readonly IChunksManager _chunksManager;
     [SerializeField] private TMP_Text mainText;
     private StringBuilder mainTextString;
 
@@ -63,7 +63,7 @@ public class ChunksStatDisplayGUI : MonoBehaviour, IStatDisplay
 
         if (timeNow > lastInterval + updateInterval)
         {
-            (chunks, meshVertices, meshIndices, colliderVertices, colliderIndices) = ChunksManager.Instance.ChunksMeshAndColliderSize();
+            (chunks, meshVertices, meshIndices, colliderVertices, colliderIndices) = _chunksManager.ChunksMeshAndColliderSize();
             UpdateMainText();
             if (displayContent)
                 UpdateContentText();

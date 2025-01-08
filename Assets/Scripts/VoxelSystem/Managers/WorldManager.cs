@@ -11,7 +11,7 @@ namespace VoxelSystem.Managers
     public class WorldManager : MonoBehaviour
     {
         [Inject] private readonly IChunksManager _chunksManager;
-        [SerializeField] private const string WorldManagerLoopString = "WorldManagerLoop";
+        private const string WorldManagerLoopString = "WorldManagerLoop";
 
         [Header("Player")]
         [SerializeField] private Transform player;
@@ -25,7 +25,7 @@ namespace VoxelSystem.Managers
         }
 
         // Update is called once per frame
-        void Update()
+        private void Update()
         {
             var UpdateTime = Time.realtimeSinceStartup;
             playerChunkPosition = WorldSettings.ChunkPositionFromPosition(player.transform.position);

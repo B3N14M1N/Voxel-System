@@ -12,6 +12,11 @@ namespace VoxelSystem.Managers
         /// <summary>
         /// 
         /// </summary>
+        void GenerateChunksPositionsCheck();
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="center"></param>
         void UpdateChunks(Vector3 center);
 
@@ -33,6 +38,26 @@ namespace VoxelSystem.Managers
         /// </summary>
         /// <param name="pos"></param>
         void CompleteGeneratingChunk(Vector3 pos);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        (int, int, int, int, int) ChunksMeshAndColliderSize();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mV"></param>
+        /// <param name="mI"></param>
+        void UpdateChunkMeshSize(int mV, int mI);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cV"></param>
+        /// <param name="cI"></param>
+        void UpdateChunkColliderSize(int cV, int cI);
     }
 
 }

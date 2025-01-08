@@ -1,9 +1,11 @@
 using System;
 using TMPro;
 using UnityEngine;
+using Zenject;
 
 public class PlayerSettingsGUI : MonoBehaviour, ISettings
 {
+    [Inject] private readonly VoxelSystem.Managers.IChunksManager _chunksManager;
     [Header("Player settings")]
     public TMP_InputField InputRenderDistance;
     public TMP_InputField InputCacheDistance;
@@ -24,6 +26,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         InputChunksToLoad.text = PlayerSettings.ChunksToLoad.ToString();
         InputTimeToLoadNextChunks.text = PlayerSettings.TimeToLoadNextChunks.ToString();
     }
+
     public void Save()
     {
         var valueInt = Convert.ToInt32(InputRenderDistance.text);
@@ -37,7 +40,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         var valueFloat = (float)Convert.ToDouble(InputTimeToLoadNextChunks.text);
         PlayerSettings.TimeToLoadNextChunks = valueFloat >= 0 ? valueFloat : PlayerSettings.TimeToLoadNextChunks;
 
-        ChunksManager.Instance.GenerateChunksPositionsCheck();
+        _chunksManager.GenerateChunksPositionsCheck();
         Load();
     }
 }

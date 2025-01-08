@@ -3,13 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using VoxelSystem.Factory;
+
 namespace VoxelSystem.Managers
 {
-
+    /// <summary>
+    /// 
+    /// </summary>
     public class ChunksManager : IChunksManager
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
@@ -27,7 +30,7 @@ namespace VoxelSystem.Managers
         {
             get
             {
-                Chunk chunk = new Chunk(Vector3.zero)
+                Chunk chunk = new(Vector3.zero, this)
                 {
                     Parent = _parent,
                     Active = false
@@ -106,25 +109,9 @@ namespace VoxelSystem.Managers
             if (chunksToGenerate.Count > 0)
                 ChunkFactory.Instance.GenerateChunksData(chunksToGenerate);
 
-            List<Vector3> removals = (from key in _cached.Keys
-                                      where !WorldSettings.ChunksInRange(center, key, PlayerSettings.RenderDistance + PlayerSettings.CacheDistance)
-                                      select key).ToList();
-
-            foreach (var key in removals)
-            {
-                _chunksToClear.Enqueue(_cached[key]);
-                _cached.Remove(key);
-                //ClearChunkAndEnqueue(key, ref _cached);
-            }
-
-            foreach (var key in _cached.Keys)
-            {
-                _cached[key].Active = false;
-            }
-
             AvgCounter.UpdateCounter(ChunksManagerLoopString, (Time.realtimeSinceStartup - UpdateTime) * 1000f);
 
-            ClearOldChunksAsync(new CancellationToken());
+            ClearChunksAsync(new CancellationToken());
         }
 
         /// <summary>
@@ -241,9 +228,29 @@ namespace VoxelSystem.Managers
             return (_active.Count, meshVertices, meshIndices, colliderVertices, colliderIndices);
         }
 
-        private async void ClearOldChunksAsync(CancellationToken cancellationToken)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        private async void ClearChunksAsync(CancellationToken cancellationToken)
         {
-            while(_chunksToClear.Count == 0)
+            List<Vector3> removals = (from key in _cached.Keys
+                                      where !WorldSettings.ChunksInRange(Center, key, PlayerSettings.RenderDistance + PlayerSettings.CacheDistance)
+                                      select key).ToList();
+
+            foreach (var key in removals)
+            {
+                _chunksToClear.Enqueue(_cached[key]);
+                _cached.Remove(key);
+                //ClearChunkAndEnqueue(key, ref _cached);
+            }
+
+            foreach (var key in _cached.Keys)
+            {
+                _cached[key].Active = false;
+            }
+
+            while (_chunksToClear.Count != 0)
             {
                 if (cancellationToken.IsCancellationRequested) return;
 

@@ -5,7 +5,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
-using static UnityEngine.Mesh;
+using VoxelSystem.Managers;
 
 public class ChunkColliderGenerator
 {
@@ -13,11 +13,15 @@ public class ChunkColliderGenerator
     public MeshColliderDataStruct colliderData;
     private JobHandle jobHandle;
     public bool IsComplete => jobHandle.IsCompleted;
+    private readonly IChunksManager _chunksManager;
 
-    public ChunkColliderGenerator(GenerationData generationData, ref NativeArray<HeightMap> heightMap)
+    public ChunkColliderGenerator(GenerationData generationData,
+        ref NativeArray<HeightMap> heightMap,
+        IChunksManager chunksManager)
     {
         GenerationData = generationData;
         colliderData.Initialize();
+        _chunksManager = chunksManager;
         var dataJob = new ChunkColliderJob()
         {
             chunkWidth = WorldSettings.ChunkWidth,
@@ -33,7 +37,7 @@ public class ChunkColliderGenerator
         if (IsComplete)
         {
             jobHandle.Complete();
-            Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
             if (chunk != null)
             {
                 var collider = colliderData.GenerateMesh();
@@ -297,7 +301,7 @@ public struct ChunkColliderJob : IJob
         if (Vertices.IsCreated) Vertices.Dispose();
         if (FaceVerticeIndex.IsCreated) FaceVerticeIndex.Dispose();
         if (FaceIndices.IsCreated) FaceIndices.Dispose();
-        if(SidesNeighbourVerticesIndices.IsCreated) SidesNeighbourVerticesIndices.Dispose();
+        if (SidesNeighbourVerticesIndices.IsCreated) SidesNeighbourVerticesIndices.Dispose();
         if (SideFaceIndices.IsCreated) SideFaceIndices.Dispose();
         #endregion
     }

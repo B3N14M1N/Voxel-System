@@ -1,10 +1,11 @@
 using Unity.Collections;
 using UnityEngine;
+using VoxelSystem.Factory;
 
 public class Chunk
 {
     #region Fields
-
+    private VoxelSystem.Managers.IChunksManager _chunksManager;
     private GameObject chunkInstance;
 
     private MeshFilter meshFilter;
@@ -164,6 +165,12 @@ public class Chunk
         this.Position = Position;
         CreateInstance();
     }
+    public Chunk(Vector3 Position, VoxelSystem.Managers.IChunksManager chunksManager)
+    {
+        this.Position = Position;
+        _chunksManager = chunksManager;
+        CreateInstance();
+    }
 
     private void CreateInstance()
     {
@@ -204,7 +211,7 @@ public class Chunk
                 if (meshFilter.sharedMesh != null)
                     GameObject.Destroy(meshFilter.sharedMesh);
                 meshFilter.sharedMesh = mesh;
-                ChunksManager.Instance.UpdateChunkMeshSize(meshFilter.sharedMesh.vertexCount, meshFilter.sharedMesh.triangles.Length);
+                _chunksManager?.UpdateChunkMeshSize(meshFilter.sharedMesh.vertexCount, meshFilter.sharedMesh.triangles.Length);
             }
 
             if (meshRenderer == null)
@@ -230,7 +237,7 @@ public class Chunk
             if(meshCollider.sharedMesh != null) 
                 GameObject.Destroy(meshCollider.sharedMesh);
             meshCollider.sharedMesh = mesh; 
-            ChunksManager.Instance.UpdateChunkColliderSize(meshCollider.sharedMesh.vertexCount, meshCollider.sharedMesh.triangles.Length);
+            _chunksManager?.UpdateChunkColliderSize(meshCollider.sharedMesh.vertexCount, meshCollider.sharedMesh.triangles.Length);
             ColliderGenerated = true;
         }
     }
@@ -263,7 +270,7 @@ public class Chunk
             }
             if (meshFilter != null && meshFilter.sharedMesh != null)
             {
-                ChunksManager.Instance.UpdateChunkMeshSize(-meshFilter.sharedMesh.vertexCount, -meshFilter.sharedMesh.triangles.Length);
+                _chunksManager?.UpdateChunkMeshSize(-meshFilter.sharedMesh.vertexCount, -meshFilter.sharedMesh.triangles.Length);
                 GameObject.Destroy(meshFilter.sharedMesh);
             }
             MeshGenerated = false;
@@ -274,7 +281,7 @@ public class Chunk
             }
             if (meshCollider != null && meshCollider.sharedMesh != null)
             {
-                ChunksManager.Instance.UpdateChunkColliderSize(-meshCollider.sharedMesh.vertexCount, -meshCollider.sharedMesh.triangles.Length);
+                _chunksManager?.UpdateChunkColliderSize(-meshCollider.sharedMesh.vertexCount, -meshCollider.sharedMesh.triangles.Length);
                 GameObject.Destroy(meshCollider.sharedMesh);
             }
             ColliderGenerated = false;
