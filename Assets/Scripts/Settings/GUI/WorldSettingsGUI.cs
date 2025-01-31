@@ -34,7 +34,6 @@ public class WorldSettingsGUI : MonoBehaviour, ISettings
         WorldSettings.ChunkWidth = valueInt > 0 ? valueInt : WorldSettings.ChunkWidth;
         valueInt = Convert.ToInt32(InputChunkHeight.text);
         WorldSettings.ChunkHeight = valueInt > 0 ? valueInt : WorldSettings.ChunkHeight;
-        WorldSettings.ChunkBounds = WorldSettings.RecalculatedBounds;
         Load();
     }
 }

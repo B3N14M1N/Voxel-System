@@ -46,14 +46,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Ambient_Occulusion: 0.6
-    - _Color: 0
+    - _Ambient_Occulusion: 0.83
+    - _Color: 1
     - _Index: 0
-    - _Metallic: 0.5
+    - _Metallic: 0
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Smoothness: 0.55
-    - _UseTexture: 1
+    - _Smoothness: 0.3
+    - _UseTexture: 0
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

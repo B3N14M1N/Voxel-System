@@ -22,9 +22,9 @@ public enum VoxelType
     air = 0,
     dirt = 1,
     mud = 2,
-    sand = 4,
-    rock = 8,
-    water = 16,
+    water = 3,
+    rock = 4,
+    sand = 5,
 }
 
 public static class RWStructs
@@ -48,6 +48,7 @@ public static class RWStructs
     }
 
     public static VoxelPhysicsType GetPhysicsType(Voxel voxel) => (VoxelPhysicsType)((int)((voxel.ID & PHYSICS_TYPE_MASK) >> 8));
+
     public static VoxelType GetVoxelType(Voxel voxel) => (VoxelType)((int)(voxel.ID & VOXEL_TYPE_MASK));
     #endregion
 

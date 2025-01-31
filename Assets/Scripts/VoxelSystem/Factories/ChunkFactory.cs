@@ -11,25 +11,26 @@ namespace VoxelSystem.Factory
     /// </summary>
     public class ChunkFactory : MonoBehaviour
     {
-        private CancellationTokenSource _cancellationTokenSource = new();
         [Inject] private readonly IChunksManager _chunksManager;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private float _time = 0f;
         private List<GenerationData> _chunksToProccess = new();
         #region Fields
 
-        [Header("Noise Parameters")]
-        [SerializeField] private NoiseParametersScriptableObject _noiseParameters;
+        private int _materialIndex = 0;
         private Vector2Int[] _octaveOffsets;
-        public NoiseParametersScriptableObject NoiseParameters { get { return _noiseParameters; } }
-        public Vector2Int[] NoiseOctaves { get { return _octaveOffsets; } }
+
+        [Header("Noise Parameters")]
+        [field: SerializeField] public NoiseParametersScriptableObject NoiseParameters { get; private set; }
 
         [Header("Materials")]
-        [SerializeField] private List<Material> _materials = new List<Material>();
-        private int _materialIndex = 0;
-        public Material Material { get { return _materials[_materialIndex]; } }
-        public bool CanChangeMaterial { get; set; }
+        [field: SerializeField] private List<Material> _materials { get; set; }
 
-        [SerializeField] private KeyCode MaterialChangeKey = KeyCode.M;
+        [field: SerializeField] private KeyCode MaterialChangeKey { get; set; } = KeyCode.M;
+        public Material Material { get { return _materials[_materialIndex]; } }
+        [HideInInspector] public Vector2Int[] NoiseOctaves { get { return _octaveOffsets; } }
+        [HideInInspector] public bool CanChangeMaterial { get; set; }
+
 
         private static ChunkFactory instance;
         public static ChunkFactory Instance
@@ -60,10 +61,10 @@ namespace VoxelSystem.Factory
         public void InitSeed()
         {
             uint octavesMax = 0;
-            for (int i = 0; i < _noiseParameters.noise.Count; i++)
+            for (int i = 0; i < NoiseParameters.noise.Count; i++)
             {
-                if (_noiseParameters.noise[i].octaves > octavesMax)
-                    octavesMax = _noiseParameters.noise[i].octaves;
+                if (NoiseParameters.noise[i].octaves > octavesMax)
+                    octavesMax = NoiseParameters.noise[i].octaves;
             }
             _octaveOffsets = new Vector2Int[octavesMax];
             System.Random rnd = new((int)WorldSettings.Seed);

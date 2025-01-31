@@ -16,6 +16,7 @@ namespace VoxelSystem.Managers
     public class ChunksManager : IChunksManager
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
+        private CancellationTokenSource _cancellationTokenSource = new();
         public Vector3 Center { get; private set; }
 
         private readonly Queue<Chunk> _pool = new();
@@ -111,7 +112,7 @@ namespace VoxelSystem.Managers
 
             AvgCounter.UpdateCounter(ChunksManagerLoopString, (Time.realtimeSinceStartup - UpdateTime) * 1000f);
 
-            ClearChunksAsync(new CancellationToken());
+            ClearChunksAsync(_cancellationTokenSource.Token);
         }
 
         /// <summary>
@@ -264,6 +265,7 @@ namespace VoxelSystem.Managers
         /// </summary>
         public void Dispose()
         {
+            _cancellationTokenSource.Cancel();
             while (_pool.Count > 0)
             {
                 _pool.Dequeue().Dispose();
@@ -275,6 +277,12 @@ namespace VoxelSystem.Managers
                 _active[key].Dispose();
             }
             _active.Clear();
+
+            while (_chunksToClear.Count > 0)
+            {
+                _chunksToClear.Dequeue().Dispose();
+            }
+            _chunksToClear.Clear();
 
             foreach (var key in _cached.Keys)
             {
