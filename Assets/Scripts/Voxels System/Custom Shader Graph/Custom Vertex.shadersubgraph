@@ -315,6 +315,7 @@
     "m_SourceType": 0,
     "m_FunctionName": "UnpackData",
     "m_FunctionSource": "a79341c53b24de34fb2dfe875ea5ae6f",
+    "m_FunctionSourceUsePragmas": true,
     "m_FunctionBody": "Enter function body here..."
 }
 

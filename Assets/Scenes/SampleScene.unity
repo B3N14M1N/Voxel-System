@@ -504,7 +504,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.5235849, g: 0.7088574, b: 1, a: 0}
+  m_BackGroundColor: {r: 0.4764151, g: 0.7693962, b: 1, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -526,7 +526,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.01
-  far clip plane: 2000
+  far clip plane: 4000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -584,7 +584,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 3
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -599,7 +599,7 @@ MonoBehaviour:
   m_Version: 2
   m_TaaSettings:
     m_Quality: 3
-    m_FrameInfluence: 0.1
+    m_FrameInfluence: 0.100000024
     m_JitterScale: 1
     m_MipBias: 0
     m_VarianceClampScale: 0.9
@@ -1236,10 +1236,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77fc82e5d405b1244b75bf8f7e4c04b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <NoiseParameters>k__BackingField: {fileID: 11400000, guid: 013ccff6bf6ab2a4a85add3323b41d39, type: 2}
+  <NoiseParameters>k__BackingField: {fileID: 11400000, guid: af83bb12c991e7644ab9675bb0b0a15d, type: 2}
   <_materials>k__BackingField:
   - {fileID: 2100000, guid: 803be1c311d0fc548ba75b7dd47ada71, type: 2}
-  - {fileID: -876546973899608171, guid: 08a57af6f02973444b3a9dfa35643180, type: 3}
   - {fileID: 2100000, guid: c0937caeae84d8d4b9c4c7208c4f67c0, type: 2}
   <MaterialChangeKey>k__BackingField: 109
 --- !u!4 &669034330

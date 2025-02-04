@@ -13,7 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
-  m_LightmapFlags: 2
+  m_LightmapFlags: 1
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
@@ -29,7 +29,7 @@ Material:
         m_Scale: {x: 0.5, y: 0.5}
         m_Offset: {x: 0, y: 0}
     - _Texture2D_Array:
-        m_Texture: {fileID: 18700000, guid: ea68ee016d3dbd94eb24e76177eb4fea, type: 3}
+        m_Texture: {fileID: 18700000, guid: 20bc612b5d2c83143881212ebdfad779, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
@@ -46,14 +46,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Ambient_Occulusion: 0.83
-    - _Color: 1
+    - _Ambient_Occulusion: 1
+    - _Color: 0
     - _Index: 0
     - _Metallic: 0
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Smoothness: 0.3
-    - _UseTexture: 0
+    - _Smoothness: 0
+    - _UseTexture: 1
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
