@@ -543,7 +543,7 @@ public struct ChunkParallelMeshJob : IJobParallelFor
         x <<= 8;
         x += (byte)position.x;
 
-        return new float3(BitConverter.Int32BitsToSingle((int)x), heigth, id);
+        return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth/chunkHeight, id);
     }
 
     #endregion

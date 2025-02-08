@@ -12,8 +12,9 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 1
+  m_InvalidKeywords:
+  - _Color
+  m_LightmapFlags: 2
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
@@ -47,7 +48,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Ambient_Occulusion: 1
-    - _Color: 0
+    - _Color: 1
     - _Index: 0
     - _Metallic: 0
     - _QueueControl: 0
