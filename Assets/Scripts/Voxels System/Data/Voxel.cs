@@ -20,11 +20,10 @@ public enum VoxelPhysicsType
 public enum VoxelType
 {
     air = 0,
-    dirt = 1,
-    mud = 2,
-    water = 3,
-    rock = 4,
-    sand = 5,
+    grass = 1,
+    dirt = 2,
+    stone = 3,
+    sand = 4,
 }
 
 public static class RWStructs

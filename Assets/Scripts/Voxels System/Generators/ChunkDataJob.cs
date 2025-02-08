@@ -112,8 +112,6 @@ public struct ChunkDataJob : IJobParallelFor
         int x = index / (chunkWidth + 2);
         int z = index % (chunkWidth + 2);
 
-        Voxel solid = new Voxel() { ID = 1 };
-        Voxel emptyVoxel = Voxel.EmptyVoxel;
         HeightMap heightMap = new HeightMap() { data = 0 };
         int height;
 
@@ -135,14 +133,44 @@ public struct ChunkDataJob : IJobParallelFor
 
         RWStructs.SetSolid(ref heightMap, (uint)height);
         heightMaps[index] = heightMap;
+        Voxel grass = new() { ID = (ushort)VoxelType.grass };
+        Voxel dirt = new() { ID = (ushort)VoxelType.dirt };
+        Voxel stone = new() { ID = (ushort)VoxelType.stone };
+        Voxel sand = new() { ID = (ushort)VoxelType.sand };
+
         for (int y = 0; y < chunkHeight; y++)
         {
+            Voxel voxel = Voxel.EmptyVoxel;
             int voxelIndex = GetVoxelIndex(x, y, z);
-            voxels[voxelIndex] = emptyVoxel;
-            if (y < height)
+
+            if (y >= height)
             {
-                voxels[voxelIndex] = solid;
+                voxels[voxelIndex] = voxel;
+                continue;
             }
+
+            voxel = stone;
+
+            if (height >= chunkHeight * 0.8f) // if not at the peak (stone)
+            {
+                voxels[voxelIndex] = voxel;
+                continue;
+            }
+
+            if (height > chunkHeight * 0.2f) // if not at the bottom place grass/dirt
+            {
+                if (y >= height - 3)
+                    voxel = dirt;
+                if (y == height - 1)
+                    voxel = grass;
+            }
+            else // place sand on top layer then place stone
+            {
+                if (y == height - 1)
+                    voxel = sand;
+            }
+
+            voxels[voxelIndex] = voxel;
         }
     }
 

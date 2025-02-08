@@ -1505,6 +1505,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _parent: {fileID: 669034330}
+  blocks: {fileID: 11400000, guid: a03615c4a48530a4e969f13bf7e511bd, type: 2}
 --- !u!114 &958056437
 MonoBehaviour:
   m_ObjectHideFlags: 0

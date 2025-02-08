@@ -325,10 +325,11 @@ public class ChunkParallelMeshGenerator
     private MeshDataStruct meshData;
     public bool IsComplete => jobHandle.IsCompleted;
     private readonly IChunksManager _chunksManager;
+
     #region Allocations
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    static readonly NativeArray<float3> Vertices = new NativeArray<float3>(8, Allocator.Persistent)
+    static readonly NativeArray<float3> Vertices = new(8, Allocator.Persistent)
     {
         [0] = new float3(0, 1, 0), //0
         [1] = new float3(1, 1, 0), //1
@@ -343,7 +344,7 @@ public class ChunkParallelMeshGenerator
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    static readonly NativeArray<float3> FaceCheck = new NativeArray<float3>(6, Allocator.Persistent)
+    static readonly NativeArray<float3> FaceCheck = new(6, Allocator.Persistent)
     {
         [0] = new float3(0, 0, -1), //back 0
         [1] = new float3(1, 0, 0), //right 1
@@ -355,7 +356,7 @@ public class ChunkParallelMeshGenerator
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    static readonly NativeArray<int> FaceVerticeIndex = new NativeArray<int>(24, Allocator.Persistent)
+    static readonly NativeArray<int> FaceVerticeIndex = new(24, Allocator.Persistent)
     {
         [0] = 4,
         [1] = 5,
@@ -385,7 +386,7 @@ public class ChunkParallelMeshGenerator
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    static readonly NativeArray<float2> VerticeUVs = new NativeArray<float2>(5, Allocator.Persistent)
+    static readonly NativeArray<float2> VerticeUVs = new(5, Allocator.Persistent)
     {
         [0] = new float2(0, 0),
         [1] = new float2(1, 0),
@@ -395,7 +396,7 @@ public class ChunkParallelMeshGenerator
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    static readonly NativeArray<int> FaceIndices = new NativeArray<int>(6, Allocator.Persistent)
+    static readonly NativeArray<int> FaceIndices = new(6, Allocator.Persistent)
     {
         [0] = 0,
         [1] = 3,
@@ -524,15 +525,17 @@ public struct ChunkParallelMeshJob : IJobParallelFor
     {
         return z + (y * (chunkWidth + 2)) + (x * (chunkWidth + 2) * chunkHeight);
     }
+
     private readonly int GetMapIndex(int x, int z)
     {
         return z + (x * (chunkWidth + 2));
     }
-    public float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int id, int face, bool top)
+
+    public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, ushort id)
     {
-        int x = uvIndex;
+        uint x = (uint)uvIndex;
         x <<= 3;
-        x += normalIndex & 0x7;
+        x += (byte)(normalIndex & 0x7);
         x <<= 8;
         x += (byte)position.z;
         x <<= 8;
@@ -540,33 +543,7 @@ public struct ChunkParallelMeshJob : IJobParallelFor
         x <<= 8;
         x += (byte)position.x;
 
-        float y = id / (chunkHeight + 1.0f);
-        int z = 0;//id;
-        z <<= 8;
-        switch (face)
-        {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                {
-                    face = 1; break;
-                }
-            case 4:
-                {
-                    face = 0;
-                    break;
-                }
-            case 5:
-                {
-                    face = 2;
-                    break;
-                }
-        }
-        z += (byte)face;
-        z <<= 8;
-        z += top ? 1 : 0;
-        return new float3(BitConverter.Int32BitsToSingle(x), y, BitConverter.Int32BitsToSingle(z));
+        return new float3(BitConverter.Int32BitsToSingle((int)x), heigth, id);
     }
 
     #endregion
@@ -586,7 +563,7 @@ public struct ChunkParallelMeshJob : IJobParallelFor
                 if (voxel.IsEmpty)
                     continue;
 
-                float3 voxelPos = new float3(x - 1, y, z - 1);
+                float3 voxelPos = new(x - 1, y, z - 1);
 
                 bool surrounded = true;
 
@@ -602,14 +579,15 @@ public struct ChunkParallelMeshJob : IJobParallelFor
                         if (RWStructs.GetVoxelType(voxels[faceCheckIndex]) != 0)
                             continue;
                     }
+
                     surrounded = false;
-                    //int verts = Interlocked.Add(ref meshData.VertsCount, 4);
+
                     int verts = Interlocked.Add(ref ((int*)meshData.count.GetUnsafePtr())[0], 4);
-                    //int tris = Interlocked.Add(ref meshData.IndicesCount, 6);
                     int tris = Interlocked.Add(ref ((int*)meshData.count.GetUnsafePtr())[1], 6);
+
                     for (int j = 0; j < 4; j++)
                     {
-                        meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[i * 4 + j]] + voxelPos, i, j, y, i, y == maxHeight);
+                        meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[i * 4 + j]] + voxelPos, i, j, y, voxel.ID);
                     }
                     for (int k = 0; k < 6; k++)
                     {
