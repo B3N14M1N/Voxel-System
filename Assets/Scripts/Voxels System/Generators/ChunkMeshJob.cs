@@ -74,57 +74,65 @@ public struct MeshDataStruct
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
     public NativeArray<float3> vertices;
+
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
     public NativeArray<int> indices;
 
     [NativeDisableParallelForRestriction]
     [NativeDisableContainerSafetyRestriction]
-    public NativeArray<int> count;
+    public NativeReference<int> vertsCount;
+
+    [NativeDisableParallelForRestriction]
+    [NativeDisableContainerSafetyRestriction]
+    public NativeReference<int> trisCount;
 
     public bool Initialized;
+
     public void Initialize()
     {
-        if (Initialized)
-            Dispose();
+        if (Initialized) Dispose();
+
         Initialized = true;
-        count = new NativeArray<int>(2, Allocator.Persistent);
+
+        vertsCount = new(0, Allocator.Persistent);
+        trisCount = new(0, Allocator.Persistent);
+
         //divide by 2 -> cant be more vertices & faces than half of the Voxels.
         vertices = new NativeArray<float3>(WorldSettings.RenderedVoxelsInChunk * 6 * 4 / 2, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         indices = new NativeArray<int>(WorldSettings.RenderedVoxelsInChunk * 6 * 6 / 2, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-        count[0] = count[1] = 0;
     }
+
     public void Dispose()
     {
         Initialized = false;
         if (vertices.IsCreated) vertices.Dispose();
         if (indices.IsCreated) indices.Dispose();
-        if (count.IsCreated) count.Dispose();
+        if (vertsCount.IsCreated) vertsCount.Dispose();
+        if (trisCount.IsCreated) trisCount.Dispose();
     }
 
     public void UploadToMesh(ref Mesh mesh)
     {
-        if (Initialized && mesh != null)
-        {
-            var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
-            mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, count[0], flags);
-            mesh.SetIndices(indices, 0, count[1], MeshTopology.Triangles, 0, false);
-            mesh.bounds = WorldSettings.ChunkBounds;
-        }
+        if (!Initialized || mesh == null) return;
+
+        var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
+        mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, vertsCount.Value, flags);
+        mesh.SetIndices(indices, 0, trisCount.Value, MeshTopology.Triangles, 0, false);
+        mesh.bounds = WorldSettings.ChunkBounds;
+
     }
 
     public Mesh GenerateMesh()
     {
-        if (Initialized)
-        {
-            Mesh mesh = new Mesh() { indexFormat = IndexFormat.UInt32 };
-            var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
-            mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, count[0], flags);
-            mesh.SetIndices(indices, 0, count[1], MeshTopology.Triangles, 0, false);
-            mesh.bounds = WorldSettings.ChunkBounds;
-            return mesh;
-        }
-        return null;
+        if (!Initialized) return null;
+
+        Mesh mesh = new() { indexFormat = IndexFormat.UInt32 };
+        var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
+        mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, vertsCount.Value, flags);
+        mesh.SetIndices(indices, 0, trisCount.Value, MeshTopology.Triangles, 0, false);
+        mesh.bounds = WorldSettings.ChunkBounds;
+        return mesh;
     }
 }
 
@@ -164,7 +172,7 @@ public struct ChunkMeshJob : IJob
     #endregion
 
     #region Execution
-    public float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int id)
+    public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int id)
     {
         int x = uvIndex;
         x <<= 3;
@@ -290,14 +298,14 @@ public struct ChunkMeshJob : IJob
                         surrounded = false;
                         for (int j = 0; j < 4; j++)
                         {
-                            meshData.vertices[meshData.count[0] + j] = PackVertexData(Vertices[FaceVerticeIndex[i * 4 + j]] + voxelPos, i, j, y);
+                            meshData.vertices[meshData.vertsCount.Value + j] = PackVertexData(Vertices[FaceVerticeIndex[i * 4 + j]] + voxelPos, i, j, y);
                         }
                         for (int k = 0; k < 6; k++)
                         {
-                            meshData.indices[meshData.count[1] + k] = meshData.count[0] + FaceIndices[k];
+                            meshData.indices[meshData.trisCount.Value + k] = meshData.vertsCount.Value + FaceIndices[k];
                         }
-                        meshData.count[0] += 4;
-                        meshData.count[1] += 6;
+                        meshData.vertsCount.Value += 4;
+                        meshData.trisCount.Value += 6;
                     }
                     if (surrounded)
                         y = -1;
@@ -543,7 +551,7 @@ public struct ChunkParallelMeshJob : IJobParallelFor
         x <<= 8;
         x += (byte)position.x;
 
-        return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth/chunkHeight, id);
+        return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth / chunkHeight, id);
     }
 
     #endregion
@@ -582,8 +590,8 @@ public struct ChunkParallelMeshJob : IJobParallelFor
 
                     surrounded = false;
 
-                    int verts = Interlocked.Add(ref ((int*)meshData.count.GetUnsafePtr())[0], 4);
-                    int tris = Interlocked.Add(ref ((int*)meshData.count.GetUnsafePtr())[1], 6);
+                    int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr<int>()[0], 4);
+                    int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr<int>()[0], 6);
 
                     for (int j = 0; j < 4; j++)
                     {
