@@ -4,12 +4,12 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class JobChunksFilter
+public class ChunksRenderView
 {
     private NativeArray<float3> Chunks;
 
     private JobHandle jobHandle;
-    public JobChunksFilter(Vector3 center, int halfRange)
+    public ChunksRenderView(Vector3 center, int halfRange)
     {
         int size = (halfRange * 2 + 1);
         Chunks = new NativeArray<float3>(size * size, Allocator.Persistent);
@@ -35,7 +35,7 @@ public class JobChunksFilter
         if(Chunks.IsCreated) Chunks.Dispose();
     }
 
-    ~JobChunksFilter()
+    ~ChunksRenderView()
     {
         Dispose();
     }

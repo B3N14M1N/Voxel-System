@@ -16,7 +16,7 @@ namespace VoxelSystem.Managers
     public class ChunksManager : IChunksManager
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
-        private CancellationTokenSource _cancellationTokenSource = new();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         public Vector3 Center { get; private set; }
 
         private readonly Queue<Chunk> _pool = new();
@@ -61,7 +61,7 @@ namespace VoxelSystem.Managers
         /// </summary>
         public void GenerateChunksPositionsCheck()
         {
-            var job = new JobChunksFilter(Vector3.zero, PlayerSettings.RenderDistance);
+            var job = new ChunksRenderView(Vector3.zero, PlayerSettings.RenderDistance);
             _chunksPositionCheck = job.Complete();
             job.Dispose();
         }
@@ -82,7 +82,7 @@ namespace VoxelSystem.Managers
 
             for (int i = 0; i < _chunksPositionCheck.Length; i++)
             {
-                Vector3 key = new Vector3(_chunksPositionCheck[i].x + Center.x, 0, _chunksPositionCheck[i].z + Center.z);
+                Vector3 key = new(_chunksPositionCheck[i].x + Center.x, 0, _chunksPositionCheck[i].z + Center.z);
                 var data = new GenerationData()
                 {
                     position = key,
@@ -99,12 +99,11 @@ namespace VoxelSystem.Managers
                     _cached.Remove(key);
                     continue;
                 }
-                if (_generating.TryGetValue(key, out chunk))
-                {
-                    continue;
-                }
 
-                chunksToGenerate.Add(data);
+                if (!_generating.TryGetValue(key, out _))
+                {
+                    chunksToGenerate.Add(data);
+                }
             }
 
             if (chunksToGenerate.Count > 0)
@@ -172,11 +171,10 @@ namespace VoxelSystem.Managers
         /// <returns></returns>
         public Chunk GetChunk(Vector3 pos)
         {
-            Chunk chunk = GetChunkFromSource(pos, ref _active);
-            if (chunk == null)
-                chunk = GetChunkFromSource(pos, ref _cached);
-            if (chunk == null)
-                chunk = GetChunkFromSource(pos, ref _generating);
+            Chunk chunk = (GetChunkFromSource(pos, ref _active) 
+                ?? GetChunkFromSource(pos, ref _cached)) 
+                ?? GetChunkFromSource(pos, ref _generating);
+
             return chunk;
         }
 

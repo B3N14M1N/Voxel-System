@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using VoxelSystem.Factory;
+using VoxelSystem.Generators;
 using VoxelSystem.Managers;
 
 public class ChunkJob

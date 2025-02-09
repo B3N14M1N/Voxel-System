@@ -10,7 +10,6 @@ public class GameInstaller : MonoInstaller
     public override void InstallBindings()
     {
         var mapping = blocks.GenerateAtlas();
-        Debug.Log(mapping);
         var chunksManager = new ChunksManager(_parent);
         Container.Bind<IChunksManager>().FromInstance(chunksManager).AsSingle();
     }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using VoxelSystem.Generators;
 using VoxelSystem.Managers;
 using Zenject;
 
@@ -15,8 +16,8 @@ namespace VoxelSystem.Factory
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private float _time = 0f;
         private List<GenerationData> _chunksToProccess = new();
-        #region Fields
 
+        #region Fields
         private int _materialIndex = 0;
         private Vector2Int[] _octaveOffsets;
 
