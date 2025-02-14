@@ -1,21 +1,28 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
+using VoxelSystem.Data.Blocks;
+using Zenject;
 
 public class VoxelBlockManager : MonoBehaviour
 {
+    [Inject] private readonly BlocksCatalogue _blocksCatalogue;
+
     public Camera mainCamera;
     public GameObject blockPrefab;
     public LayerMask terrainLayer;
-
-    private enum PlacementState { None, Placing, Removing }
-    private PlacementState _currentState = PlacementState.None;
+    public event Action OnSelected;
 
     private GameObject _previewObject;
+    private enum PlacementState { None, Placing, Removing }
+    private PlacementState _currentState = PlacementState.None;
     private VoxelType _blockType;
-    public event Action OnSelected;
+
+    private void Awake()
+    {
+        if (_previewObject == null && blockPrefab != null)
+            _previewObject = Instantiate(blockPrefab);
+    }
 
     void Update()
     {
@@ -30,7 +37,6 @@ public class VoxelBlockManager : MonoBehaviour
 
             if (_currentState == PlacementState.Placing)
             {
-
                 if (Input.GetMouseButtonDown(0))
                 {
                     PlaceCube(targetPosition);
@@ -56,9 +62,7 @@ public class VoxelBlockManager : MonoBehaviour
         );
 
         if (_currentState == PlacementState.Removing)
-        {
             snapped -= Vector3.up;
-        }
 
         return snapped;
     }
@@ -75,19 +79,17 @@ public class VoxelBlockManager : MonoBehaviour
 
     private void ShowPreview(Vector3 position)
     {
-        if (_previewObject == null)
-        {
-            _previewObject = Instantiate(blockPrefab);
-        }
+        if (_previewObject == null) return;
+
+        _previewObject.SetActive(true);
         _previewObject.transform.position = position;
     }
 
     private void HidePreview()
     {
-        if (_previewObject != null)
-        {
-            Destroy(_previewObject);
-        }
+        if (_previewObject == null) return;
+           
+        _previewObject.SetActive(false);
     }
 
     public void SetPlacingState(BlockSelector block)
@@ -105,6 +107,17 @@ public class VoxelBlockManager : MonoBehaviour
         _currentState = PlacementState.Placing;
 
         // set material
+        if(_previewObject.TryGetComponent<MeshRenderer>(out var renderer))
+        {
+            renderer.sharedMaterial.SetFloat("_Placing", 1f);
+            renderer.sharedMaterial.SetFloat("_Removing", 0f);
+
+            if (_blocksCatalogue.BlocksMapping.TryGetValue(_blockType, out var index))
+            {
+                renderer.sharedMaterial.SetFloat("_Render_Block", 1f);
+                renderer.sharedMaterial.SetFloat("_Block_Index", index);
+            }
+        }
     }
 
     public void SetRemovingState()
@@ -112,6 +125,13 @@ public class VoxelBlockManager : MonoBehaviour
         _currentState = PlacementState.Removing;
 
         // set material
+        if (_previewObject.TryGetComponent<MeshRenderer>(out var renderer))
+        {
+            renderer.sharedMaterial.SetFloat("_Removing", 1f);
+            renderer.sharedMaterial.SetFloat("_Placing", 0f);
+            renderer.sharedMaterial.SetFloat("_Render_Block", 0f);
+            renderer.sharedMaterial.SetFloat("_Block_Index", 0f);
+        }
     }
 
     public void SetIdleState()
@@ -119,6 +139,24 @@ public class VoxelBlockManager : MonoBehaviour
         _blockType = VoxelType.air;
         OnSelected?.Invoke();
         _currentState = PlacementState.None;
+
+        // set material
+        if (_previewObject.TryGetComponent<MeshRenderer>(out var renderer))
+        {
+            renderer.sharedMaterial.SetFloat("_Render_Block", 0f);
+            renderer.sharedMaterial.SetFloat("_Block_Index", 0f);
+            renderer.sharedMaterial.SetFloat("_Placing", 0f);
+            renderer.sharedMaterial.SetFloat("_Removing", 0f);
+        }
+
         HidePreview();
+    }
+
+    private void OnDestroy()
+    {
+        if (_previewObject != null)
+        {
+            Destroy(_previewObject);
+        }
     }
 }

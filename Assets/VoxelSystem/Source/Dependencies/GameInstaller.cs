@@ -10,8 +10,9 @@ public class GameInstaller : MonoInstaller
     [SerializeField] private VoxelBlockManager _blockManager;
     public override void InstallBindings()
     {
-        var mapping = _blocks.GenerateAtlas();
+        _blocks.GenerateAtlas();
         var chunksManager = new ChunksManager(_parent);
+        Container.Bind<BlocksCatalogue>().FromInstance(_blocks).AsSingle();
         Container.Bind<IChunksManager>().FromInstance(chunksManager).AsSingle();
         Container.Bind<VoxelBlockManager>().FromInstance(_blockManager).AsSingle();
     }

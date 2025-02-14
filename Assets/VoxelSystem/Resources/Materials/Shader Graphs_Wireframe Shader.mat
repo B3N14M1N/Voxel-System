@@ -51,13 +51,13 @@ Material:
     m_Ints: []
     m_Floats:
     - _Alpha_Clipping: 0.01
-    - _Block_Index: 4
+    - _Block_Index: 1
     - _Blocked: 0
     - _Edge_Width: 0.1
     - _Effect_Speed: 2
     - _Extrude_Value: 0.01
     - _Lift_Value: 0.01
-    - _Placing: 0
+    - _Placing: 1
     - _QueueControl: 0
     - _QueueOffset: 0
     - _Removing: 0

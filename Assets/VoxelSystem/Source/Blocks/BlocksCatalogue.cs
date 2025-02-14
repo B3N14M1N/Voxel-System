@@ -13,6 +13,7 @@ namespace VoxelSystem.Data.Blocks
     {
         [field: SerializeField] private List<Material> Materials { get; set; }
         [field: SerializeField] private List<Block> Blocks { get; set; }
+        public Dictionary<VoxelType, int> BlocksMapping { get; private set; }
 
         public Dictionary<VoxelType, int> GenerateAtlas()
         {
@@ -47,6 +48,8 @@ namespace VoxelSystem.Data.Blocks
             }
 
             SaveAtlas(textureArray);
+
+            BlocksMapping = textureMapping;
 
             return textureMapping;
         }
