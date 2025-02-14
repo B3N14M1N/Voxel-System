@@ -1822,7 +1822,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77fc82e5d405b1244b75bf8f7e4c04b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <NoiseParameters>k__BackingField: {fileID: 11400000, guid: f49d18fd09079084cbca909e40ae9cb0, type: 2}
+  <NoiseParameters>k__BackingField: {fileID: 11400000, guid: af83bb12c991e7644ab9675bb0b0a15d, type: 2}
   <_materials>k__BackingField:
   - {fileID: 2100000, guid: 803be1c311d0fc548ba75b7dd47ada71, type: 2}
   - {fileID: 2100000, guid: c0937caeae84d8d4b9c4c7208c4f67c0, type: 2}
@@ -2665,7 +2665,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1108492651
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2829,7 +2829,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 31
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: -2
   m_TargetDisplay: 0
 --- !u!224 &1114614314
 RectTransform:
@@ -4580,7 +4580,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1598419517475846709, guid: 11c66e680642f1f4a8ef2715f3cc077e, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0.0000007748604
+      value: 0.000091314316
       objectReference: {fileID: 0}
     - target: {fileID: 1744770407622411555, guid: 11c66e680642f1f4a8ef2715f3cc077e, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -4692,7 +4692,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6969841043621541808, guid: 11c66e680642f1f4a8ef2715f3cc077e, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4709,7 +4709,7 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 1369952522}
   - {fileID: 1108492654}
-  - {fileID: 652186927}
   - {fileID: 988289813}
-  - {fileID: 958056438}
   - {fileID: 1114614314}
+  - {fileID: 958056438}
+  - {fileID: 652186927}
