@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: acafe5c5fe607f54aaddfa3e7b452d1a, type: 3}
   m_Name: Blocks
   m_EditorClassIdentifier: 
-  <Material>k__BackingField: {fileID: 2100000, guid: 803be1c311d0fc548ba75b7dd47ada71, type: 2}
+  <Materials>k__BackingField:
+  - {fileID: 2100000, guid: 803be1c311d0fc548ba75b7dd47ada71, type: 2}
+  - {fileID: 2100000, guid: 48b37ae3dd5756441a1f266168479eaa, type: 2}
   <Blocks>k__BackingField:
   - <VoxelType>k__BackingField: 0
     <TopTexture>k__BackingField: {fileID: 0}

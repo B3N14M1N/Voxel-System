@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 namespace VoxelSystem.Data.Blocks
@@ -9,7 +11,7 @@ namespace VoxelSystem.Data.Blocks
     [CreateAssetMenu(fileName = "Blocks", menuName = "Voxel System/Blocks Catalogue", order = 0)]
     public class BlocksCatalogue : ScriptableObject
     {
-        [field: SerializeField] private Material Material { get; set; }
+        [field: SerializeField] private List<Material> Materials { get; set; }
         [field: SerializeField] private List<Block> Blocks { get; set; }
 
         public Dictionary<VoxelType, int> GenerateAtlas()
@@ -25,7 +27,7 @@ namespace VoxelSystem.Data.Blocks
 
             Dictionary<VoxelType, int> textureMapping = new Dictionary<VoxelType, int>();
 
-            var placeholder = CreateWhiteTexture(textureSize);
+            var placeholder = CreateBlankTexture(textureSize);
             for (int i = 0; i < blockCount; i++)
             {
                 Block block = Blocks[i];
@@ -39,7 +41,13 @@ namespace VoxelSystem.Data.Blocks
             }
 
             textureArray.Apply();
-            Material.SetTexture("_Texture2D_Array", textureArray);
+            foreach (var material in Materials)
+            {
+                material.SetTexture("_Texture2D_Array", textureArray);
+            }
+
+            SaveAtlas(textureArray);
+
             return textureMapping;
         }
 
@@ -59,9 +67,9 @@ namespace VoxelSystem.Data.Blocks
             return linearTexture;
         }
 
-        private Texture2D CreateWhiteTexture(int size)
+        private Texture2D CreateBlankTexture(int size)
         {
-            Texture2D whiteTexture = new(size, size, TextureFormat.RGBA32, false)
+            Texture2D blankTexture = new(size, size, TextureFormat.RGBA32, false)
             {
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
@@ -69,11 +77,38 @@ namespace VoxelSystem.Data.Blocks
             Color32[] pixels = new Color32[size * size];
             for (int i = 0; i < pixels.Length; i++)
             {
-                pixels[i] = Color.white;
+                pixels[i] = new Color32(0, 0, 0, 0);
             }
-            whiteTexture.SetPixels32(pixels);
-            whiteTexture.Apply();
-            return whiteTexture;
+            blankTexture.SetPixels32(pixels);
+            blankTexture.Apply();
+            return blankTexture;
+        }
+
+        public void SaveAtlas(Texture2DArray textureArray)
+        {
+#if UNITY_EDITOR
+            string directoryPath = "Assets/VoxelSystem/Resources/Textures/Blocks/Atlas";
+            string assetPath = Path.Combine(directoryPath, "Atlas.asset");
+
+            // Ensure the directory exists
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            // Delete existing asset to avoid conflicts
+            if (AssetDatabase.LoadAssetAtPath<Texture2DArray>(assetPath) != null)
+            {
+                AssetDatabase.DeleteAsset(assetPath);
+            }
+
+            // Save the Texture2DArray as a Unity asset
+            AssetDatabase.CreateAsset(textureArray, assetPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"Saved texture atlas at: {assetPath}");
+#endif
         }
     }
 }
