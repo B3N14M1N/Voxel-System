@@ -11,13 +11,15 @@ Material:
   m_Shader: {fileID: -6465566751694194690, guid: 33dd396d52ff45f4f81b9653ed50cb92, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _ALPHATEST_ON
   m_InvalidKeywords: []
-  m_LightmapFlags: 4
+  m_LightmapFlags: 1
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 1
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
+  m_CustomRenderQueue: 2450
+  stringTagMap:
+    RenderType: TransparentCutout
   disabledShaderPasses:
   - MOTIONVECTORS
   m_LockedProperties: 
@@ -50,19 +52,33 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AlphaClip: 1
+    - _AlphaToMask: 1
     - _Alpha_Clipping: 0.01
+    - _Blend: 0
+    - _BlendModePreserveSpecular: 1
     - _Block_Index: 1
     - _Blocked: 0
-    - _Edge_Width: 0.1
+    - _CastShadows: 1
+    - _Cull: 0
+    - _DstBlend: 0
+    - _Edge_Width: 0.0625
     - _Effect_Speed: 2
     - _Extrude_Value: 0.01
     - _Lift_Value: 0.01
     - _Placing: 1
     - _QueueControl: 0
     - _QueueOffset: 0
+    - _ReceiveShadows: 1
     - _Removing: 0
     - _Render_Block: 1
+    - _SrcBlend: 1
+    - _Surface: 0
     - _Transparency: 1
+    - _WorkflowMode: 1
+    - _ZTest: 4
+    - _ZWrite: 1
+    - _ZWriteControl: 1
     m_Colors:
     - _Blocked_Color: {r: 1, g: 0, b: 0, a: 1}
     - _Blocked_Edge_Color: {r: 1, g: 0, b: 0, a: 1}

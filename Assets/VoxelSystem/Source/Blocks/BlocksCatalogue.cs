@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,13 +11,13 @@ namespace VoxelSystem.Data.Blocks
     /// 
     /// </summary>
     [CreateAssetMenu(fileName = "Blocks", menuName = "Voxel System/Blocks Catalogue", order = 0)]
-    public class BlocksCatalogue : ScriptableObject
+    public class BlocksCatalogue : ScriptableObject, IDisposable
     {
         [field: SerializeField] private List<Material> Materials { get; set; }
         [field: SerializeField] private List<Block> Blocks { get; set; }
-        public Dictionary<VoxelType, int> BlocksMapping { get; private set; }
+        public NativeParallelHashMap<int, int> TextureMapping { get; private set; }
 
-        public Dictionary<VoxelType, int> GenerateAtlas()
+        public NativeParallelHashMap<int, int> GenerateAtlas()
         {
             int blockCount = Blocks.Count;
             int textureSize = 16; // Assuming all textures are 16x16
@@ -26,7 +28,8 @@ namespace VoxelSystem.Data.Blocks
                 wrapMode = TextureWrapMode.Clamp
             };
 
-            Dictionary<VoxelType, int> textureMapping = new Dictionary<VoxelType, int>();
+            NativeParallelHashMap<int, int> textureMapping = new(Blocks.Count, Allocator.Persistent);
+            //Dictionary<VoxelType, int> textureMapping = new Dictionary<VoxelType, int>();
 
             var placeholder = CreateBlankTexture(textureSize);
             for (int i = 0; i < blockCount; i++)
@@ -38,7 +41,7 @@ namespace VoxelSystem.Data.Blocks
                 textureArray.SetPixels32(topTexture.GetPixels32(), i * 2);
                 textureArray.SetPixels32(sideTexture.GetPixels32(), i * 2 + 1);
 
-                textureMapping[block.VoxelType] = i;
+                textureMapping[(int)block.VoxelType] = i;
             }
 
             textureArray.Apply();
@@ -49,7 +52,7 @@ namespace VoxelSystem.Data.Blocks
 
             SaveAtlas(textureArray);
 
-            BlocksMapping = textureMapping;
+            TextureMapping = textureMapping;
 
             return textureMapping;
         }
@@ -87,7 +90,7 @@ namespace VoxelSystem.Data.Blocks
             return blankTexture;
         }
 
-        public void SaveAtlas(Texture2DArray textureArray)
+        private void SaveAtlas(Texture2DArray textureArray)
         {
 #if UNITY_EDITOR
             string directoryPath = "Assets/VoxelSystem/Resources/Textures/Blocks/Atlas";
@@ -112,6 +115,12 @@ namespace VoxelSystem.Data.Blocks
 
             Debug.Log($"Saved texture atlas at: {assetPath}");
 #endif
+        }
+
+        public void Dispose()
+        {
+            Debug.Log("[Blocks Catalogue] Disposing of Texture Mapping");
+            if(TextureMapping.IsCreated) TextureMapping.Dispose();
         }
     }
 }

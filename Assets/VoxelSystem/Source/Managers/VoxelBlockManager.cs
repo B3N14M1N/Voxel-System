@@ -29,7 +29,7 @@ public class VoxelBlockManager : MonoBehaviour
         if (_currentState == PlacementState.None || EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer) && hit.normal.y == 1)
+        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer) && hit.normal.y >= 1.0f)
         {
             Vector3 targetPosition = GetSnappedPosition(hit.point);
 
@@ -62,7 +62,7 @@ public class VoxelBlockManager : MonoBehaviour
         );
 
         if (_currentState == PlacementState.Removing)
-            snapped -= Vector3.up;
+            snapped += Vector3.down;
 
         return snapped;
     }
@@ -81,8 +81,8 @@ public class VoxelBlockManager : MonoBehaviour
     {
         if (_previewObject == null) return;
 
-        _previewObject.SetActive(true);
         _previewObject.transform.position = position;
+        _previewObject.SetActive(true);
     }
 
     private void HidePreview()
@@ -112,7 +112,7 @@ public class VoxelBlockManager : MonoBehaviour
             renderer.sharedMaterial.SetFloat("_Placing", 1f);
             renderer.sharedMaterial.SetFloat("_Removing", 0f);
 
-            if (_blocksCatalogue.BlocksMapping.TryGetValue(_blockType, out var index))
+            if (_blocksCatalogue.TextureMapping.TryGetValue((int)_blockType, out var index))
             {
                 renderer.sharedMaterial.SetFloat("_Render_Block", 1f);
                 renderer.sharedMaterial.SetFloat("_Block_Index", index);

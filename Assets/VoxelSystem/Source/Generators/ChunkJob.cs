@@ -75,7 +75,9 @@ public class ChunkJob
             _chunksManager?.SetChunkToGenerating(GenerationData.position);
             chunk = _chunksManager?.GetChunk(GenerationData.position);
         }
+
         StartGenerating(cancellationToken);
+        //StartGenerating(new CancellationToken());
     }
 
     public bool Complete()

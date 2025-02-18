@@ -27,7 +27,6 @@ namespace VoxelSystem.Generators
             _chunksManager = chunksManager;
             GenerationData = generationData;
             meshData.Initialize();
-
             var meshJob = new ChunkMeshJob()
             {
                 chunkWidth = WorldSettings.ChunkWidth,

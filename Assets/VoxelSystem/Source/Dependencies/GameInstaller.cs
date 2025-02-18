@@ -16,4 +16,9 @@ public class GameInstaller : MonoInstaller
         Container.Bind<IChunksManager>().FromInstance(chunksManager).AsSingle();
         Container.Bind<VoxelBlockManager>().FromInstance(_blockManager).AsSingle();
     }
+
+    public void OnApplicationQuit()
+    {
+        _blocks.Dispose();
+    }
 }
