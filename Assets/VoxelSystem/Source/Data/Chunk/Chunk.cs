@@ -1,5 +1,7 @@
+using System;
 using Unity.Collections;
 using UnityEngine;
+using VoxelSystem.Data;
 using VoxelSystem.Factory;
 
 public class Chunk

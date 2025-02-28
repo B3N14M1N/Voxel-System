@@ -4,6 +4,9 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
+using VoxelSystem.Data;
+using VoxelSystem.Data.GenerationFlags;
+using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
 
 namespace VoxelSystem.Generators
@@ -26,7 +29,9 @@ namespace VoxelSystem.Generators
         {
             _chunksManager = chunksManager;
             GenerationData = generationData;
-            meshData.Initialize();
+            var verticesSize = WorldSettings.RenderedVoxelsInChunk * 6 * 4 / 2;
+            int indicesSize = WorldSettings.RenderedVoxelsInChunk * 6 * 6 / 2;
+            meshData.Initialize(verticesSize, indicesSize);
             var meshJob = new ChunkMeshJob()
             {
                 chunkWidth = WorldSettings.ChunkWidth,
@@ -200,7 +205,7 @@ namespace VoxelSystem.Generators
                 {
                     for (int z = 1; z <= chunkWidth; z++)
                     {
-                        int maxHeight = (int)(RWStructs.GetSolid(heightMaps[GetMapIndex(x, z)])) - 1;
+                        int maxHeight = (int)(heightMaps[GetMapIndex(x, z)].GetSolid()) - 1;
 
 
                         for (int y = maxHeight; y >= 0; y--)
@@ -224,7 +229,7 @@ namespace VoxelSystem.Generators
                                     if (y == 0 && i == 5) // lowest and bottom face
                                         continue;
                                     int faceCheckIndex = GetVoxelIndex(x + (int)face.x, y + (int)face.y, z + (int)face.z);
-                                    if (RWStructs.GetVoxelType(voxels[faceCheckIndex]) != 0)
+                                    if (voxels[faceCheckIndex].GetVoxelType() != 0)
                                         continue;
                                 }
                                 surrounded = false;

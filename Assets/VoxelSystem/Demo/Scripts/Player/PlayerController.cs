@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Player Settings")]
     [SerializeField] private GameObject _characterMesh;
+    [SerializeField] private GameObject _fpsDot;
     [SerializeField] private PlayerState state = PlayerState.TPS;
     [field: SerializeField] public bool CanControl { get; private set; } = true;
     [field: SerializeField] public bool CanFly { get; private set; } = true;
@@ -47,17 +48,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _jumpPower = 7.5f;
     [SerializeField] private float _gravityMultiplier = 2f;
     [SerializeField] private float _groundCheckDistance = 0.1f;
-    [SerializeField] private LayerMask _groundLayer = new LayerMask() { value = 1 << 0 };
+    [SerializeField] private LayerMask _groundLayer = new() { value = 1 << 0 };
 
     private void Start()
     {
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponentInChildren<Animator>();
+
         if (_cameraPivot == null)
         {
             _cameraTransform = Camera.main.transform;
             _cameraPivot = _cameraTransform.parent;
         }
+        ToggleCursor(state == PlayerState.FPS);
     }
 
     private void Update()
@@ -168,6 +171,7 @@ public class PlayerController : MonoBehaviour
         else if (Input.GetKey(KeyCode.LeftAlt)) _speedMultiplier = _crouchMultiplier;
         else _speedMultiplier = 1f;
     }
+
     private void ToggleState()
     {
         if (state == PlayerState.TPS)
@@ -175,12 +179,22 @@ public class PlayerController : MonoBehaviour
             _previousZoom = _zoom;
             _zoom = 0;
             state = PlayerState.FPS;
+            ToggleCursor(true); // Lock cursor in FPS mode
         }
         else
         {
             _zoom = _previousZoom;
             state = PlayerState.TPS;
+            ToggleCursor(false); // Unlock cursor in TPS mode
         }
         _characterMesh.SetActive(state == PlayerState.TPS);
+    }
+
+    private void ToggleCursor(bool isLocked)
+    {
+        Cursor.lockState = isLocked ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !isLocked;
+
+        if(_fpsDot != null) _fpsDot.SetActive(isLocked);
     }
 }

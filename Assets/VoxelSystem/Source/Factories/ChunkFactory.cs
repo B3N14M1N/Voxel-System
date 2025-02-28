@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;
 using Zenject;

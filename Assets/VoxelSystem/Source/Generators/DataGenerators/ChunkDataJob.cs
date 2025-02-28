@@ -5,6 +5,8 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using VoxelSystem.Managers;
+using VoxelSystem.Data;
+using VoxelSystem.Data.GenerationFlags;
 
 namespace VoxelSystem.Generators
 {
@@ -131,7 +133,7 @@ namespace VoxelSystem.Generators
                     height = chunkHeight;
                 }
 
-                RWStructs.SetSolid(ref heightMap, (uint)height);
+                heightMap.SetSolid((uint)height);
                 heightMaps[index] = heightMap;
                 Voxel grass = new() { ID = (ushort)VoxelType.grass };
                 Voxel dirt = new() { ID = (ushort)VoxelType.dirt };

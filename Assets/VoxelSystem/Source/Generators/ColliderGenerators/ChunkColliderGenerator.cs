@@ -4,6 +4,8 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using VoxelSystem.Data;
+using VoxelSystem.Data.GenerationFlags;
+using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
 
 namespace VoxelSystem.Generators
@@ -11,7 +13,7 @@ namespace VoxelSystem.Generators
     public class ChunkColliderGenerator
     {
         public GenerationData GenerationData { get; private set; }
-        public MeshColliderDataStruct colliderData;
+        public MeshDataStruct colliderData;
         private JobHandle jobHandle;
         public bool IsComplete => jobHandle.IsCompleted;
         private readonly IChunksManager _chunksManager;
@@ -21,7 +23,9 @@ namespace VoxelSystem.Generators
             IChunksManager chunksManager)
         {
             GenerationData = generationData;
-            colliderData.Initialize();
+            var verticesSize = WorldSettings.ChunkWidth * 4 * (WorldSettings.ChunkWidth + 4);
+            int indicesSize = WorldSettings.ChunkWidth * (WorldSettings.ChunkWidth * 3 + 2) * 6;
+            colliderData.Initialize(verticesSize, indicesSize);
             _chunksManager = chunksManager;
             var dataJob = new ChunkColliderJob()
             {
@@ -74,15 +78,15 @@ namespace VoxelSystem.Generators
 
             #region Output
             [NativeDisableContainerSafetyRestriction]
-            public MeshColliderDataStruct colliderData;
+            public MeshDataStruct colliderData;
             #endregion
 
             private readonly int GetMapIndex(int x, int z) => z + (x * (chunkWidth + 2));
 
             public void Execute()
             {
-                colliderData.count[0] = 0;
-                colliderData.count[1] = 0;
+                colliderData.vertsCount.Value = 0;
+                colliderData.trisCount.Value = 0;
 
                 NativeHashMap<int3, int> vertexMap = new(chunkWidth * chunkWidth * 2, Allocator.Temp);
 
@@ -91,7 +95,7 @@ namespace VoxelSystem.Generators
                 {
                     for (int x = 1; x <= chunkWidth; x++)
                     {
-                        int y = (int)RWStructs.GetSolid(heightMap[GetMapIndex(x, z)]);
+                        int y = (int)heightMap[GetMapIndex(x, z)].GetSolid();
                         float3 voxelPos = new(x - 1, y, z - 1);
 
                         // Generate Top Face
@@ -105,7 +109,7 @@ namespace VoxelSystem.Generators
                         // Generate Side Faces using adjacent top face vertices
                         int neighborY;
 
-                        neighborY = (int)RWStructs.GetSolid(heightMap[GetMapIndex(x, z + 1)]);
+                        neighborY = (int)heightMap[GetMapIndex(x, z + 1)].GetSolid();
                         if (z == chunkWidth || neighborY < y)
                         {
                             int vB2 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z + 1));
@@ -113,7 +117,7 @@ namespace VoxelSystem.Generators
                             AddFace(vB3, vT3, vT2, vB2);
                         }
 
-                        neighborY = (int)RWStructs.GetSolid(heightMap[GetMapIndex(x, z - 1)]);
+                        neighborY = (int)heightMap[GetMapIndex(x, z - 1)].GetSolid();
                         if (z == 1 || neighborY < y)
                         {
                             int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));
@@ -121,7 +125,7 @@ namespace VoxelSystem.Generators
                             AddFace(vT0, vT1, vB1, vB0);
                         }
 
-                        neighborY = (int)RWStructs.GetSolid(heightMap[GetMapIndex(x + 1, z)]);
+                        neighborY = (int)heightMap[GetMapIndex(x + 1, z)].GetSolid();
                         if (x == chunkWidth || neighborY < y)
                         {
                             int vB1 = AddVertex(ref vertexMap, new float3(voxelPos.x + 1, neighborY, voxelPos.z));
@@ -129,7 +133,7 @@ namespace VoxelSystem.Generators
                             AddFace(vT1, vT3, vB3, vB1);
                         }
 
-                        neighborY = (int)RWStructs.GetSolid(heightMap[GetMapIndex(x - 1, z)]);
+                        neighborY = (int)heightMap[GetMapIndex(x - 1, z)].GetSolid();
                         if (x == 1 || neighborY < y)
                         {
                             int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));
@@ -144,12 +148,12 @@ namespace VoxelSystem.Generators
 
             private int AddVertex(ref NativeHashMap<int3, int> vertexMap, float3 position)
             {
-                int3 key = new int3((int)position.x, (int)position.y, (int)position.z);
+                int3 key = new((int)position.x, (int)position.y, (int)position.z);
                 if (!vertexMap.TryGetValue(key, out int index))
                 {
-                    index = colliderData.count[0];
+                    index = colliderData.vertsCount.Value;
                     colliderData.vertices[index] = position;
-                    colliderData.count[0]++;
+                    colliderData.vertsCount.Value++;
                     vertexMap[key] = index;
                 }
                 return index;
@@ -157,12 +161,12 @@ namespace VoxelSystem.Generators
 
             private void AddFace(int v0, int v1, int v2, int v3)
             {
-                colliderData.indices[colliderData.count[1]++] = v0;
-                colliderData.indices[colliderData.count[1]++] = v1;
-                colliderData.indices[colliderData.count[1]++] = v2;
-                colliderData.indices[colliderData.count[1]++] = v0;
-                colliderData.indices[colliderData.count[1]++] = v2;
-                colliderData.indices[colliderData.count[1]++] = v3;
+                colliderData.indices[colliderData.trisCount.Value++] = v0;
+                colliderData.indices[colliderData.trisCount.Value++] = v1;
+                colliderData.indices[colliderData.trisCount.Value++] = v2;
+                colliderData.indices[colliderData.trisCount.Value++] = v0;
+                colliderData.indices[colliderData.trisCount.Value++] = v2;
+                colliderData.indices[colliderData.trisCount.Value++] = v3;
             }
         }
     }

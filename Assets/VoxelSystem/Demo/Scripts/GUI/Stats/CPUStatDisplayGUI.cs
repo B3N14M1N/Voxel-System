@@ -78,9 +78,9 @@ public class CPUStatDisplayGUI : MonoBehaviour, IStatDisplay
         {
             contentTextString.Length = 0;
             contentTextString.AppendFormat("Avg : {0}\tms\r\nMin : {1}\tms\r\nMax: {2}\tms",
-                string.Format("{0:0.######}", AvgCounter.GetCounter(CounterName).AVG),
-                string.Format("{0:0.######}", AvgCounter.GetCounter(CounterName).MinTime),
-                string.Format("{0:0.######}", AvgCounter.GetCounter(CounterName).MaxTime));
+                string.Format("{0:0.###}", AvgCounter.GetCounter(CounterName).AVG),
+                string.Format("{0:0.###}", AvgCounter.GetCounter(CounterName).MinTime),
+                string.Format("{0:0.###}", AvgCounter.GetCounter(CounterName).MaxTime));
             contentText.text = contentTextString.ToString();
         }
     }
@@ -89,7 +89,7 @@ public class CPUStatDisplayGUI : MonoBehaviour, IStatDisplay
     {
         mainTextString.Length = 0;
         mainTextString.AppendFormat("CPU: {0}\tms\r\n",
-            string.Format("{0:0.###}", AvgCounter.GetCounter(CounterName).Time));
+            string.Format("{0:0.0#}", AvgCounter.GetCounter(CounterName).Time));
         mainText.text = mainTextString.ToString();
     }
 }

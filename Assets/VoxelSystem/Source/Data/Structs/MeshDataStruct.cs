@@ -5,7 +5,7 @@ using Unity.Mathematics;
 using UnityEngine.Rendering;
 using UnityEngine;
 
-namespace VoxelSystem.Generators
+namespace VoxelSystem.Data.Structs
 {
     [Serializable]
     public struct MeshDataStruct
@@ -28,18 +28,15 @@ namespace VoxelSystem.Generators
 
         public bool Initialized;
 
-        public void Initialize()
+        public void Initialize(int verticesSize, int indicesSize)
         {
-            if (Initialized) Dispose();
-
-            Initialized = true;
-
             vertsCount = new(0, Allocator.Persistent);
             trisCount = new(0, Allocator.Persistent);
 
-            //divide by 2 -> cant be more vertices & faces than half of the Voxels.
-            vertices = new NativeArray<float3>(WorldSettings.RenderedVoxelsInChunk * 6 * 4 / 2, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            indices = new NativeArray<int>(WorldSettings.RenderedVoxelsInChunk * 6 * 6 / 2, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            vertices = new NativeArray<float3>(verticesSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            indices = new NativeArray<int>(indicesSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
+            Initialized = true;
         }
 
         public void Dispose()
@@ -51,27 +48,16 @@ namespace VoxelSystem.Generators
             if (trisCount.IsCreated) trisCount.Dispose();
         }
 
-        public void UploadToMesh(ref Mesh mesh)
-        {
-            if (!Initialized || mesh == null) return;
-
-            var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
-            mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, vertsCount.Value, flags);
-            mesh.SetIndices(indices, 0, trisCount.Value, MeshTopology.Triangles, 0, false);
-            mesh.bounds = WorldSettings.ChunkBounds;
-
-        }
-
         public Mesh GenerateMesh()
         {
             if (!Initialized) return null;
 
-            Mesh mesh = new() { indexFormat = IndexFormat.UInt32 };
+            Mesh mesh = new() { indexFormat = (trisCount.Value > short.MaxValue) ? IndexFormat.UInt32 : IndexFormat.UInt16 };
             var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
             mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, vertsCount.Value, flags);
             mesh.SetIndices(indices, 0, trisCount.Value, MeshTopology.Triangles, 0, false);
             mesh.bounds = WorldSettings.ChunkBounds;
             return mesh;
         }
-    } 
+    }
 }

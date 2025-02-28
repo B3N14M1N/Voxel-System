@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;

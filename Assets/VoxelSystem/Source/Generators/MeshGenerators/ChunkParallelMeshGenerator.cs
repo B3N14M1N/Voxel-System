@@ -6,6 +6,9 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using VoxelSystem.Managers;
+using VoxelSystem.Data.Structs;
+using VoxelSystem.Data;
+using VoxelSystem.Data.GenerationFlags;
 
 namespace VoxelSystem.Generators
 {
@@ -108,7 +111,9 @@ namespace VoxelSystem.Generators
         {
             _chunksManager = chunksManager;
             GenerationData = generationData;
-            meshData.Initialize();
+            var verticesSize = WorldSettings.RenderedVoxelsInChunk * 6 * 4 / 2;
+            int indicesSize = WorldSettings.RenderedVoxelsInChunk * 6 * 6 / 2;
+            meshData.Initialize(verticesSize, indicesSize);
 
             var meshJob = new ChunkParallelMeshJob()
             {
@@ -248,7 +253,7 @@ namespace VoxelSystem.Generators
                 int z = index % (chunkWidth + 2);
                 if (x >= 1 && z >= 1 && x <= chunkWidth && z <= chunkWidth)
                 {
-                    int maxHeight = (int)(RWStructs.GetSolid(heightMaps[GetMapIndex(x, z)])) - 1;
+                    int maxHeight = (int)(heightMaps[GetMapIndex(x, z)].GetSolid()) - 1;
                     for (int y = maxHeight; y >= 0; y--)
                     {
                         Voxel voxel = voxels[GetVoxelIndex(x, y, z)];
@@ -269,7 +274,7 @@ namespace VoxelSystem.Generators
                                 if (y == 0 && i == 5) // lowest and bottom face
                                     continue;
                                 int faceCheckIndex = GetVoxelIndex(x + (int)face.x, y + (int)face.y, z + (int)face.z);
-                                if (RWStructs.GetVoxelType(voxels[faceCheckIndex]) != 0)
+                                if (voxels[faceCheckIndex].GetVoxelType() != 0)
                                     continue;
                             }
 

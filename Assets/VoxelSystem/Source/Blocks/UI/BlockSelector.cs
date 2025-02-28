@@ -1,5 +1,8 @@
+using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using VoxelSystem.Data;
 using Zenject;
 
 public class BlockSelector : MonoBehaviour
@@ -10,6 +13,7 @@ public class BlockSelector : MonoBehaviour
     [field: SerializeField] public VoxelType Type { get; private set; }
     [field: SerializeField] private Image Backgroud { get; set; }
     [field: SerializeField] private Color SelectedState { get; set; } = Color.white;
+    [field: SerializeField] private KeyCode HotKey { get; set; } = KeyCode.Alpha1;
 
     private Color _defaultState;
     private bool _selected = false;
@@ -25,6 +29,12 @@ public class BlockSelector : MonoBehaviour
         if (Backgroud == null) return;
 
         _defaultState = Backgroud.color;
+
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(HotKey)) OnSelected();
     }
 
     private void OnSelected()

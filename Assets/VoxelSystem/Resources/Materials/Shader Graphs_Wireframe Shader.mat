@@ -58,7 +58,7 @@ Material:
     - _AmbientOcculusion: 1
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
-    - _Block_Index: 1
+    - _Block_Index: 0
     - _Blocked: 0
     - _CastShadows: 1
     - _Cull: 0
@@ -68,12 +68,12 @@ Material:
     - _Extrude_Value: 0.01
     - _Lift_Value: 0.01
     - _Metallic: 0
-    - _Placing: 1
+    - _Placing: 0
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Removing: 0
-    - _Render_Block: 1
+    - _Render_Block: 0
     - _Smoothness: 0
     - _SrcBlend: 1
     - _Surface: 0

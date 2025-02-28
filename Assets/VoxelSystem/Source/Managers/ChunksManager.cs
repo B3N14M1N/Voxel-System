@@ -6,6 +6,7 @@ using System.Threading;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
 
 namespace VoxelSystem.Managers
