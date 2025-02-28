@@ -26,43 +26,42 @@ public class VoxelBlockManager : MonoBehaviour
 
     void Update()
     {
+        HidePreview();
+
         if (_currentState == PlacementState.None || EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer) && hit.normal.y >= 1.0f)
+
+        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer) || hit.normal.y < 1.0f) return;
+
+        Vector3 targetPosition = GetSnappedPosition(hit.point);
+
+        ShowPreview(targetPosition);
+
+        if (!Input.GetMouseButtonDown(0)) return;
+
+        if (_currentState == PlacementState.Placing)
         {
-            Vector3 targetPosition = GetSnappedPosition(hit.point);
-
-            ShowPreview(targetPosition);
-
-            if (_currentState == PlacementState.Placing)
-            {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    PlaceCube(targetPosition);
-                }
-            }
-            else if (_currentState == PlacementState.Removing && Input.GetMouseButtonDown(0))
-            {
-                RemoveCube(targetPosition);
-            }
+            PlaceCube(targetPosition);
         }
-        else
+        else if (_currentState == PlacementState.Removing)
         {
-            HidePreview();
+            RemoveCube(targetPosition);
         }
     }
 
     private Vector3 GetSnappedPosition(Vector3 hitPos)
     {
+        if (_currentState == PlacementState.Removing)
+            hitPos += Vector3.down * .5f;
+
         Vector3 snapped = new(
             Mathf.FloorToInt(hitPos.x),
-            Mathf.FloorToInt(hitPos.y),
+            Mathf.FloorToInt(hitPos.y + 0.001f),
             Mathf.FloorToInt(hitPos.z)
         );
 
-        if (_currentState == PlacementState.Removing)
-            snapped += Vector3.down;
+        //Debug.LogWarning("[VoxelBlockManager] Preview block hit position: " + hitPos + "\n Snapped position: " + snapped);
 
         return snapped;
     }
@@ -88,7 +87,7 @@ public class VoxelBlockManager : MonoBehaviour
     private void HidePreview()
     {
         if (_previewObject == null) return;
-           
+
         _previewObject.SetActive(false);
     }
 
@@ -107,7 +106,7 @@ public class VoxelBlockManager : MonoBehaviour
         _currentState = PlacementState.Placing;
 
         // set material
-        if(_previewObject.TryGetComponent<MeshRenderer>(out var renderer))
+        if (_previewObject.TryGetComponent<MeshRenderer>(out var renderer))
         {
             renderer.sharedMaterial.SetFloat("_Placing", 1f);
             renderer.sharedMaterial.SetFloat("_Removing", 0f);

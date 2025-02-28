@@ -45,7 +45,7 @@ namespace VoxelSystem.Data
         {
             if (Initialized)
             {
-                Mesh mesh = new Mesh() { indexFormat = IndexFormat.UInt32 };
+                Mesh mesh = new() { indexFormat = IndexFormat.UInt32 };
                 var flags = MeshUpdateFlags.DontRecalculateBounds & MeshUpdateFlags.DontValidateIndices & MeshUpdateFlags.DontNotifyMeshUsers;
                 mesh.SetVertices(vertices.Reinterpret<Vector3>(), 0, count[0], flags);
                 mesh.SetIndices(indices, 0, count[1], MeshTopology.Triangles, 0, false);

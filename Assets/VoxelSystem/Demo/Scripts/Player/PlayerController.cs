@@ -14,31 +14,21 @@ public class PlayerController : MonoBehaviour
     private CharacterController movementController;
     private Animator animator;
 
-    [SerializeField]
     public PlayerControllerState State;
     public bool stateChanged = false;
-    [SerializeField]
     public bool Fly = true;
     public GameObject mesh;
 
     #region CAMERA CONTROLS
     [Header("Camera Controls")]
-    [SerializeField]
     public float MinX = -90f;
-    [SerializeField]
     public float MaxX = 90f;
-    [SerializeField]
     public Vector2Int minMaxZoom = new Vector2Int(-20, -1);
     private float zoom = -10f;
-    [SerializeField]
     public float LookSensitivity = 1f;
-    [SerializeField]
     public float ZoomSensitivity = 1f;
-    [SerializeField]
     public Transform cameraPivot;
-    [SerializeField]
     public Transform cameraTransform;
-    [SerializeField]
     public Vector2 cameraYsmoothFollowHeigth = new Vector2(-1f, 1f);
     public float cameraYfollowSensitivity = 1f;
 
@@ -48,7 +38,6 @@ public class PlayerController : MonoBehaviour
 
     #region MOVEMENT CONTROLS
     [Header("Movement Settings")]
-    [SerializeField]
     public float fastSpeedMultiplier = 1.5f;
     public float slowSpeedMultiplier = 0.5f;
     public float multiplierGain = 1f;
@@ -61,7 +50,6 @@ public class PlayerController : MonoBehaviour
     [Header("Walk")]
     public float walkBaseSpeed = 5f;
     [Header("Fly")]
-    [SerializeField]
     public float flyBaseSpeed = 100f;
     #endregion
 

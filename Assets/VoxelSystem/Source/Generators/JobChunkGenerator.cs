@@ -9,7 +9,7 @@ public class JobChunkGenerator
     /*
     public static int Processed { get; private set; }
     public NativeArray<Voxel> voxels;
-    public NativeArray<HeightMap> heightMaps;
+    public NativeArray<HeightMap> heightMap;
     public MeshDataStruct meshData;
     public Vector3 chunkPos;
     private NativeArray<NoiseParameters> _noiseParameters;
@@ -38,7 +38,7 @@ public class JobChunkGenerator
         ScheduleDataGeneration();
         Processed += 1;
     }
-    public JobChunkGenerator(Vector3 chunkPos, NativeArray<Voxel> voxels, NativeArray<HeightMap> heightMaps)
+    public JobChunkGenerator(Vector3 chunkPos, NativeArray<Voxel> voxels, NativeArray<HeightMap> heightMap)
     {
         this.chunkPos = chunkPos;
         GenerationStarted = true;
@@ -58,13 +58,13 @@ public class JobChunkGenerator
         if (!GenerationStarted && !DataScheduled && !DataGenerated)
         {
             voxels = new NativeArray<Voxel>((WorldSettings.ChunkWidth + 2) * WorldSettings.ChunkHeight * (WorldSettings.ChunkWidth + 2), Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            heightMaps = new NativeArray<HeightMap>((WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2), Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            heightMap = new NativeArray<HeightMap>((WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2), Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             var dataJob = new ChunkDataJob()
             {
                 chunkWidth = WorldSettings.ChunkWidth,
                 chunkHeight = WorldSettings.ChunkHeight,
                 voxels = this.voxels,
-                heightMaps = this.heightMaps,
+                heightMap = this.heightMap,
                 chunkPos = this.chunkPos,
                 _noiseParameters = this._noiseParameters,
                 _octaveOffsets = this._octaveOffsets.Reinterpret<int2>(),
@@ -72,7 +72,7 @@ public class JobChunkGenerator
             };
             GenerationStarted = true;
             DataScheduled = true;
-            dataHandle = dataJob.Schedule(heightMaps.Length, 1);
+            dataHandle = dataJob.Schedule(heightMap.Length, 1);
         }
     }
     public bool CompleteDataGeneration()
@@ -88,7 +88,7 @@ public class JobChunkGenerator
     }
     public void ScheduleMeshGeneration()
     {
-        if (GenerationStarted && DataGenerated && !MeshScheduled && voxels.IsCreated && heightMaps.IsCreated)
+        if (GenerationStarted && DataGenerated && !MeshScheduled && voxels.IsCreated && heightMap.IsCreated)
         {
             meshData.Initialize();
 
@@ -97,7 +97,7 @@ public class JobChunkGenerator
                 chunkWidth = WorldSettings.ChunkWidth,
                 chunkHeight = WorldSettings.ChunkHeight,
                 voxels = this.voxels,
-                heightMaps = this.heightMaps,
+                heightMap = this.heightMap,
                 meshData = this.meshData
             };
             MeshScheduled = true;
@@ -136,7 +136,7 @@ public class JobChunkGenerator
         if (disposeData)
         {
             if (voxels.IsCreated) voxels.Dispose();
-            if (heightMaps.IsCreated) heightMaps.Dispose();
+            if (heightMap.IsCreated) heightMap.Dispose();
         }
 
     }
