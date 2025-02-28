@@ -3241,28 +3241,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6e6649ecb576e14cab7b9ac61034a89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  controlling: 1
-  State: 1
-  stateChanged: 0
-  Fly: 0
-  mesh: {fileID: 1877319305}
-  MinX: -90
-  MaxX: 90
-  minMaxZoom: {x: -100, y: -1}
-  LookSensitivity: 1
-  ZoomSensitivity: 1.2
-  cameraPivot: {fileID: 2077513780}
-  cameraTransform: {fileID: 330585546}
-  cameraYsmoothFollowHeigth: {x: -1, y: 2}
-  cameraYfollowSensitivity: 1
-  fastSpeedMultiplier: 2.5
-  slowSpeedMultiplier: 0.5
-  multiplierGain: 1
-  JumpPower: 7
-  gravityMultiplier: 2
-  multiplier: 1
-  walkBaseSpeed: 5
-  flyBaseSpeed: 100
+  _characterMesh: {fileID: 1877319305}
+  state: 1
+  <CanControl>k__BackingField: 1
+  <CanFly>k__BackingField: 1
+  <ToggleKey>k__BackingField: 99
+  <FlyKey>k__BackingField: 102
+  <JumpKey>k__BackingField: 32
+  <CrouchKey>k__BackingField: 306
+  _cameraPivot: {fileID: 2077513780}
+  _cameraTransform: {fileID: 330585546}
+  _lookSensitivity: 1
+  _zoomSensitivity: 1
+  _zoomLimits: {x: -200, y: -1}
+  _xRotationLimits: {x: -89, y: 89}
+  _cameraYOffset: {x: -1, y: 1}
+  _cameraFollowSpeed: 1
+  _walkSpeed: 5
+  _flySpeed: 200
+  _runMultiplier: 1.5
+  _crouchMultiplier: 0.5
+  _jumpPower: 7.5
+  _gravityMultiplier: 2
+  _groundCheckDistance: 0.1
+  _groundLayer:
+    serializedVersion: 2
+    m_Bits: 1
 --- !u!143 &1369952521
 CharacterController:
   m_ObjectHideFlags: 0
@@ -3282,7 +3286,7 @@ CharacterController:
   m_Enabled: 1
   serializedVersion: 3
   m_Height: 2
-  m_Radius: 0.25
+  m_Radius: 0.15
   m_SlopeLimit: 45
   m_StepOffset: 0.2
   m_SkinWidth: 0.08

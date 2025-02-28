@@ -1,240 +1,186 @@
 using UnityEngine;
 
-public enum PlayerControllerState
+public enum PlayerState
 {
-    FPSMode = 0,
-    TPSMode = 1,
+    FPS,
+    TPS
 }
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    public bool controlling = true;
-    [Header("Setting Fields")]
-    private CharacterController movementController;
-    private Animator animator;
+    [Header("Player Settings")]
+    [SerializeField] private GameObject _characterMesh;
+    [SerializeField] private PlayerState state = PlayerState.TPS;
+    [field: SerializeField] public bool CanControl { get; private set; } = true;
+    [field: SerializeField] public bool CanFly { get; private set; } = true;
+    [field: SerializeField] private KeyCode ToggleKey { get; set; } = KeyCode.C;
+    [field: SerializeField] private KeyCode FlyKey { get; set; } = KeyCode.F;
+    [field: SerializeField] public KeyCode JumpKey { get; private set; } = KeyCode.Space;
+    [field: SerializeField] public KeyCode CrouchKey { get; private set; } = KeyCode.LeftControl;
 
-    public PlayerControllerState State;
-    public bool stateChanged = false;
-    public bool Fly = true;
-    public GameObject mesh;
+    private CharacterController _characterController;
+    private Animator _animator;
+    private Vector3 _velocity;
+    private float _speedMultiplier = 1f;
+    private float _zoom = -10f;
+    private float _previousZoom;
 
-    #region CAMERA CONTROLS
-    [Header("Camera Controls")]
-    public float MinX = -90f;
-    public float MaxX = 90f;
-    public Vector2Int minMaxZoom = new Vector2Int(-20, -1);
-    private float zoom = -10f;
-    public float LookSensitivity = 1f;
-    public float ZoomSensitivity = 1f;
-    public Transform cameraPivot;
-    public Transform cameraTransform;
-    public Vector2 cameraYsmoothFollowHeigth = new Vector2(-1f, 1f);
-    public float cameraYfollowSensitivity = 1f;
+    [Header("Camera Settings")]
+    [SerializeField] private Transform _cameraPivot;
+    [SerializeField] private Transform _cameraTransform;
+    [SerializeField] private float _lookSensitivity = 1f;
+    [SerializeField] private float _zoomSensitivity = 1f;
+    [SerializeField] private Vector2 _zoomLimits = new Vector2(-200, -1);
+    [SerializeField] private Vector2 _xRotationLimits = new Vector2(-89f, 89f);
+    [SerializeField] private Vector2 _cameraYOffset = new Vector2(-1f, 1f);
+    [SerializeField] private float _cameraFollowSpeed = 1f;
 
-    private float yRot;
-    private float xRot;
-    #endregion
+    private float _yRotation;
+    private float _xRotation;
 
-    #region MOVEMENT CONTROLS
     [Header("Movement Settings")]
-    public float fastSpeedMultiplier = 1.5f;
-    public float slowSpeedMultiplier = 0.5f;
-    public float multiplierGain = 1f;
-    public float JumpPower = 10f;
-    public float gravityMultiplier = 1.5f;
+    [SerializeField] private float _walkSpeed = 5f;
+    [SerializeField] private float _flySpeed = 200f;
+    [SerializeField] private float _runMultiplier = 1.5f;
+    [SerializeField] private float _crouchMultiplier = 0.5f;
+    [SerializeField] private float _jumpPower = 7.5f;
+    [SerializeField] private float _gravityMultiplier = 2f;
+    [SerializeField] private float _groundCheckDistance = 0.1f;
+    [SerializeField] private LayerMask _groundLayer = new LayerMask() { value = 1 << 0 };
 
-    public float multiplier = 1f;
-    private Vector3 velocity;
-
-    [Header("Walk")]
-    public float walkBaseSpeed = 5f;
-    [Header("Fly")]
-    public float flyBaseSpeed = 100f;
-    #endregion
-
-
-
-
-
-    public void Start()
+    private void Start()
     {
-        movementController = GetComponent<CharacterController>();
-        animator = GetComponentInChildren<Animator>();
-        if(cameraPivot == null )
+        _characterController = GetComponent<CharacterController>();
+        _animator = GetComponentInChildren<Animator>();
+        if (_cameraPivot == null)
         {
-            cameraTransform = Camera.main.transform;
-            cameraPivot = cameraTransform.GetComponentInParent<Transform>();
+            _cameraTransform = Camera.main.transform;
+            _cameraPivot = _cameraTransform.parent;
         }
     }
 
-    public void Update()
+    private void Update()
     {
-        if (controlling)
-        {
-            if (Input.GetKeyDown(KeyCode.C))
-                ChangeStateFields();
+        if (!CanControl) return;
 
-            if (Input.GetKeyDown(KeyCode.F))
-                Fly = !Fly;
-
-            Movement();
-            CameraMovement();
-        }
+        HandleInput();
+        HandleMovement();
+        HandleCamera();
     }
-    private void ChangeStateFields()
+
+    private void HandleInput()
     {
-        if (State == PlayerControllerState.TPSMode)
-            State = PlayerControllerState.FPSMode;
-        else State = PlayerControllerState.TPSMode;
-
-        stateChanged = true;
-
-        velocity = Vector3.zero;
-
-        transform.eulerAngles = new Vector3(0.0f, yRot, 0.0f);
-
-        if (State == PlayerControllerState.FPSMode)
-        {
-            cameraPivot.eulerAngles = new Vector3(transform.eulerAngles.x, yRot, 0.0f);
-            cameraTransform.localPosition = Vector3.zero;
-            mesh.SetActive(false);
-        }
-        if(State == PlayerControllerState.TPSMode)
-        {
-            cameraPivot.eulerAngles = new Vector3(transform.eulerAngles.x, 0.0f, 0.0f);
-            cameraTransform.localPosition = new Vector3(0, 0, zoom);
-            mesh.SetActive(true);
-        }
-        stateChanged = false;
+        if (Input.GetKeyDown(ToggleKey)) ToggleState();
+        if (Input.GetKeyDown(FlyKey)) CanFly = !CanFly;
     }
-    private void Movement()
-    {
-        var direction = GetBaseInput().normalized;
 
-        if (State == PlayerControllerState.TPSMode)
+    private void HandleMovement()
+    {
+        Vector3 direction = GetMovementInput().normalized;
+        if (state == PlayerState.TPS && direction != Vector3.zero)
         {
-            if (direction != Vector3.zero)
-            {
-                Vector3 newDirection = cameraPivot.TransformPoint(direction) - cameraPivot.position;
-                newDirection.y = 0;
-                direction = newDirection;
-                transform.forward = direction;
-            }
+            direction = AdjustDirectionToCamera(direction);
+            transform.forward = direction;
         }
         else
         {
-            direction = transform.forward * direction.z + transform.right * direction.x;
+            direction = transform.right * direction.x + transform.forward * direction.z;
         }
-        var baseSpeed = Fly ? flyBaseSpeed : walkBaseSpeed;
-        bool normalSeed = true;
-        if (Input.GetKey(KeyCode.LeftShift))
+
+        AdjustSpeedMultiplier();
+        _animator.SetBool("Speed", direction != Vector3.zero);
+        _animator.SetFloat("SpeedMultiplier", _speedMultiplier);
+
+        float moveSpeed = CanFly ? _flySpeed : _walkSpeed;
+        _characterController.Move(moveSpeed * _speedMultiplier * Time.deltaTime * direction);
+
+        if (!CanFly) ApplyGravity();
+        else HandleFlight();
+    }
+    private void ApplyGravity()
+    {
+        Vector3 groundCheckOrigin = transform.position + Vector3.up * 0.1f; // Start slightly above the feet
+        bool isGrounded = _characterController.isGrounded || Physics.Raycast(groundCheckOrigin, Vector3.down, _groundCheckDistance, _groundLayer);
+
+        if (isGrounded)
         {
-            multiplier = Mathf.MoveTowards(multiplier, fastSpeedMultiplier, multiplierGain * Time.deltaTime);
-            normalSeed = false;
+            if (_velocity.y < 0) _velocity.y = -2f; // Small downward force to keep grounded
+            if (Input.GetKey(JumpKey)) _velocity.y = _jumpPower;
         }
-        if(Input.GetKey(KeyCode.LeftAlt))
+        else _velocity.y += Physics.gravity.y * _gravityMultiplier * Time.deltaTime;
+
+        _characterController.Move(_velocity * Time.deltaTime);
+    }
+
+    private void HandleFlight()
+    {
+        _velocity = Vector3.zero;
+        if (Input.GetKey(JumpKey)) _characterController.Move(_jumpPower * Time.deltaTime * Vector3.up);
+        if (Input.GetKey(CrouchKey)) _characterController.Move(_jumpPower * Time.deltaTime * Vector3.down);
+    }
+
+    private void HandleCamera()
+    {
+        if (state == PlayerState.FPS || (state == PlayerState.TPS && Input.GetMouseButton(1)))
         {
-            multiplier = slowSpeedMultiplier;
-            normalSeed = false;
+            _yRotation += Input.GetAxisRaw("Mouse X") * _lookSensitivity;
+            _xRotation -= Input.GetAxisRaw("Mouse Y") * _lookSensitivity;
+            _xRotation = Mathf.Clamp(_xRotation, _xRotationLimits.x, _xRotationLimits.y);
         }
-        if(normalSeed)
-            multiplier = 1f;
+        _cameraPivot.rotation = Quaternion.Euler(_xRotation, _yRotation, 0);
 
-        animator.SetBool("Speed", direction != Vector3.zero);
-        animator.SetFloat("SpeedMultiplier", multiplier);
-
-        movementController.Move(baseSpeed * multiplier * Time.deltaTime * direction);
-
-        if (!Fly)
+        if (state == PlayerState.FPS)
         {
-            if (movementController.isGrounded)
-            {
-                velocity = Vector3.zero;
-                if (Input.GetKey(KeyCode.Space))
-                {
-                    velocity.y = JumpPower;
-                }
-            }
-            else
-            {
-                velocity.y += Physics.gravity.y * gravityMultiplier * Time.deltaTime;
-            }
-            movementController.Move(velocity * Time.deltaTime);
+            transform.rotation = Quaternion.Euler(0, _yRotation, 0);
+            _cameraPivot.position = transform.position + 0.9f * _characterController.height * Vector3.up;
+            _cameraTransform.localPosition = new Vector3(0, 0, 0); // Reset _zoom
+        }
+        else if (state == PlayerState.TPS)
+        {
+            float targetHeight = transform.position.y + _characterController.height * 0.5f;
+            float smoothHeight = Mathf.Clamp(_cameraPivot.position.y, targetHeight + _cameraYOffset.x, targetHeight + _cameraYOffset.y);
+            _cameraPivot.position = new Vector3(transform.position.x, Mathf.MoveTowards(smoothHeight, targetHeight, _cameraFollowSpeed * Time.deltaTime), transform.position.z);
+            _zoom = Mathf.Clamp(_zoom + Input.mouseScrollDelta.y * _zoomSensitivity, _zoomLimits.x, _zoomLimits.y);
+            _cameraTransform.localPosition = new Vector3(0, 0, _zoom);
+        }
+    }
+    private Vector3 GetMovementInput()
+    {
+        Vector3 input = Vector3.zero;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) input += Vector3.forward;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) input += Vector3.back;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) input += Vector3.left;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) input += Vector3.right;
+        return input;
+    }
+
+    private Vector3 AdjustDirectionToCamera(Vector3 direction)
+    {
+        Vector3 adjustedDirection = _cameraPivot.TransformDirection(direction);
+        adjustedDirection.y = 0;
+        return adjustedDirection.normalized;
+    }
+
+    private void AdjustSpeedMultiplier()
+    {
+        if (Input.GetKey(KeyCode.LeftShift)) _speedMultiplier = _runMultiplier;
+        else if (Input.GetKey(KeyCode.LeftAlt)) _speedMultiplier = _crouchMultiplier;
+        else _speedMultiplier = 1f;
+    }
+    private void ToggleState()
+    {
+        if (state == PlayerState.TPS)
+        {
+            _previousZoom = _zoom;
+            _zoom = 0;
+            state = PlayerState.FPS;
         }
         else
         {
-            velocity = Vector3.zero;
-            if(Input.GetKey(KeyCode.Space))
-            {
-                movementController.Move(JumpPower * multiplier * gravityMultiplier * Time.deltaTime * Vector3.up);
-            }
-            if (Input.GetKey(KeyCode.LeftControl))
-            {
-                movementController.Move(-JumpPower * multiplier * gravityMultiplier * Time.deltaTime * Vector3.up);
-            }
+            _zoom = _previousZoom;
+            state = PlayerState.TPS;
         }
+        _characterMesh.SetActive(state == PlayerState.TPS);
     }
-
-    private void CameraMovement()
-    {
-        // Camera Look
-
-        if(State == PlayerControllerState.FPSMode || (State == PlayerControllerState.TPSMode && Input.GetMouseButton(1)))
-        {
-            yRot += Input.GetAxisRaw("Mouse X") * LookSensitivity;
-            xRot -= Input.GetAxisRaw("Mouse Y") * LookSensitivity;
-
-            yRot = ClampAngle(yRot, -360, 360);
-            xRot = ClampAngle(xRot, MinX, MaxX);
-        }
-        cameraPivot.eulerAngles = new Vector3(xRot, yRot, 0.0f);
-
-        if(State == PlayerControllerState.FPSMode)
-        {
-            transform.eulerAngles = new Vector3(0.0f, yRot, 0.0f);
-            cameraPivot.transform.position = transform.position + movementController.center.y * movementController.height * Vector3.up;
-        }
-
-        if(State == PlayerControllerState.TPSMode)
-        {
-            var targetHeigth = transform.position.y + movementController.center.y * movementController.height;
-            var currentheigth = Mathf.Clamp(cameraPivot.transform.position.y, targetHeigth + cameraYsmoothFollowHeigth.x, targetHeigth + cameraYsmoothFollowHeigth.y);
-            cameraPivot.transform.position = new Vector3(transform.position.x, Mathf.MoveTowards(currentheigth, targetHeigth, cameraYfollowSensitivity * Time.deltaTime), transform.position.z);
-            zoom += Input.mouseScrollDelta.y * ZoomSensitivity;
-            zoom = Mathf.Clamp(zoom, minMaxZoom.x, minMaxZoom.y);
-            cameraTransform.localPosition = new Vector3(0f, 0f, zoom);
-        }
-    }
-    protected float ClampAngle(float angle, float min, float max)
-    {
-        if (angle < -360)
-            angle += 360;
-        if (angle > 360)
-            angle -= 360;
-
-        return Mathf.Clamp(angle, min, max);
-    }
-    private Vector3 GetBaseInput()
-    {
-        Vector3 p_Velocity = new Vector3();
-        if (Input.GetKey(KeyCode.W))
-        {
-            p_Velocity += new Vector3(0, 0, 1);
-        }
-        if (Input.GetKey(KeyCode.S))
-        {
-            p_Velocity += new Vector3(0, 0, -1);
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            p_Velocity += new Vector3(-1, 0, 0);
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            p_Velocity += new Vector3(1, 0, 0);
-        }
-        return p_Velocity;
-    }
-
 }
