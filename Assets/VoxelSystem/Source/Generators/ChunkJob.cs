@@ -46,7 +46,7 @@ public class ChunkJob
         {
             var parameters = ChunkFactory.Instance.NoiseParameters;
             var octaves = ChunkFactory.Instance.NoiseOctaves;
-            chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters.noise.ToArray(), octaves, parameters.globalScale, _chunksManager);
+            chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
             DataScheduled = true;
             Completed = false;
             Processed += 1;

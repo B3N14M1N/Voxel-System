@@ -8,9 +8,9 @@ public class NoiseParametersScriptableObject : ScriptableObject
     [SerializeField]
     public float globalScale;
     [SerializeField]
-    public List<NoiseParameters> noise;
+    public List<VoxelSystem.Settings.Generation.NoiseParameters> noise;
 };
-
+/*
 [Serializable]
 public struct NoiseParameters
 {
@@ -23,3 +23,4 @@ public struct NoiseParameters
     public float maxHeight;
     public uint ePow;
 };
+*/

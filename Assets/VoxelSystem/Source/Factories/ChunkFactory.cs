@@ -4,6 +4,7 @@ using UnityEngine;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings.Generation;
 using Zenject;
 
 namespace VoxelSystem.Factory
@@ -23,7 +24,7 @@ namespace VoxelSystem.Factory
         private Vector2Int[] _octaveOffsets;
 
         [Header("Noise Parameters")]
-        [field: SerializeField] public NoiseParametersScriptableObject NoiseParameters { get; private set; }
+        [field: SerializeField] public GenerationParameters NoiseParameters { get; private set; }
 
         [Header("Materials")]
         [field: SerializeField] private List<Material> _materials { get; set; }
@@ -62,18 +63,7 @@ namespace VoxelSystem.Factory
 
         public void InitSeed()
         {
-            uint octavesMax = 0;
-            for (int i = 0; i < NoiseParameters.noise.Count; i++)
-            {
-                if (NoiseParameters.noise[i].octaves > octavesMax)
-                    octavesMax = NoiseParameters.noise[i].octaves;
-            }
-            _octaveOffsets = new Vector2Int[octavesMax];
-            System.Random rnd = new((int)WorldSettings.Seed);
-            for (int i = 0; i < octavesMax; i++)
-            {
-                _octaveOffsets[i] = new Vector2Int(rnd.Next(-10000, 10000), rnd.Next(-10000, 10000));
-            }
+            NoiseParameters.OnValidate();
         }
 
         #endregion

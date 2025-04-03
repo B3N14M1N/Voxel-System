@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 959c7ad69059d3842aeefb7cdfe74938, type: 3}
+  m_Name: Generation Parameters
+  m_EditorClassIdentifier: 
+  <GlobalScale>k__BackingField: 100
+  <SeaLevel>k__BackingField: 0.35
+  <ContinentalNoise>k__BackingField:
+    enabled: 1
+    noise:
+      noiseScale: 5
+      octaves: 2
+      lacunarity: 1.5
+      persistence: 0.05
+    weight: 0.1
+    useAsMask: 0
+    maskThreshold: 0.1
+  <MountainNoise>k__BackingField:
+    enabled: 1
+    noise:
+      noiseScale: 4
+      octaves: 10
+      lacunarity: 1.2
+      persistence: 0.5
+    weight: 0.8
+    useAsMask: 0
+    maskThreshold: 0.5
+  <HillNoise>k__BackingField:
+    enabled: 1
+    noise:
+      noiseScale: 2.5
+      octaves: 4
+      lacunarity: 2.25
+      persistence: 0.5
+    weight: 0.4
+    useAsMask: 0
+    maskThreshold: 0.5
+  <DetailNoise>k__BackingField:
+    enabled: 1
+    noise:
+      noiseScale: 0.3
+      octaves: 3
+      lacunarity: 2.75
+      persistence: 0.3
+    weight: 0.05
+    useAsMask: 0
+    maskThreshold: 0.08
+  <SteepnessExponent>k__BackingField: 3
+  <MountainThreshold>k__BackingField: 0.6
+  <DirtDepth>k__BackingField: 3
+  <SandMargin>k__BackingField: 1
+  OctaveOffsets:
+  - {x: 45248, y: 63465}
+  - {x: 53604, y: 11632}
+  - {x: -58794, y: 11776}
+  - {x: 81205, y: -11565}
+  - {x: 95509, y: -45260}
+  - {x: -41619, y: -6538}
+  - {x: 26531, y: -6098}
+  - {x: 96430, y: -93927}
+  - {x: 72474, y: 99069}
+  - {x: 35436, y: -37082}
