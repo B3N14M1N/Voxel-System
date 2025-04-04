@@ -112,6 +112,13 @@ namespace VoxelSystem.Factory
         private List<GenerationData> _chunksToProccess = new();
 
         /// <summary>
+        /// Queue holding regeneration requests for chunks that have been modified
+        /// and need their mesh and/or collider updated. Processed after initial generation requests.
+        /// Uses GenerationData to store position and flags (Mesh/Collider).
+        /// </summary>
+        private readonly Queue<GenerationData> _chunksToRegenerate = new Queue<GenerationData>();
+
+        /// <summary>
         /// Index of the currently selected material in the _materials list.
         /// </summary>
         private int _materialIndex = 0;
@@ -165,29 +172,54 @@ namespace VoxelSystem.Factory
 
             // --- Job Dispatching Throttling ---
             _timeSinceLastDispatch += Time.deltaTime;
-            if (_timeSinceLastDispatch < PlayerSettings.TimeToLoadNextChunks && ChunkJob.Processed > 0)
+            // Check throttling condition (Allow processing if EITHER timer is up OR no jobs are running)
+            bool canProcess = _timeSinceLastDispatch >= PlayerSettings.TimeToLoadNextChunks || ChunkJob.Processed == 0;
+
+            if (!canProcess)
             {
                 return; // Wait if throttled and jobs are running
             }
 
-            // --- Dispatch Chunk Jobs (Closest First) ---
-            _timeSinceLastDispatch = 0f; // Reset timer
+            // --- Dispatch Chunk Jobs ---
+            _timeSinceLastDispatch = 0f; // Reset timer as we are processing now
 
-            // Process the queue of chunks waiting for generation, iterating forwards.
-            // This ensures chunks are processed in the order received (intended: closest first).
-            // Limit the number of jobs dispatched per frame based on PlayerSettings.ChunksProcessed.
-            // NOTE: Removing items from a List<> while iterating forward using RemoveAt(i)
-            // is less efficient than iterating backwards, but necessary here to preserve processing order.
-            for (int i = 0; i < _chunksToProccess.Count && ChunkJob.Processed < PlayerSettings.ChunksProcessed; /* No increment here */)
+            int jobsDispatchedThisFrame = 0; // Track jobs dispatched in this frame across both queues
+            int maxJobsPerFrame = PlayerSettings.ChunksProcessed - ChunkJob.Processed; // Max new jobs we can start
+
+            // 1. Process Regeneration Queue (_chunksToRegenerate - FIFO)
+            // Process this queue only if we still have capacity within the frame's job limit.
+            while (_chunksToRegenerate.Count > 0)
+            {
+                GenerationData regenData = _chunksToRegenerate.Dequeue();
+
+                // Ensure the chunk still exists before regenerating (it might have been unloaded)
+                Chunk chunk = _chunksManager?.GetChunk(regenData.position);
+                if (chunk != null && chunk.DataGenerated) // Only regenerate if chunk exists and has data
+                {
+                    // Create a job specifically for regeneration (Mesh/Collider flags only).
+                    // ChunkJob constructor should handle this case (skipping data generation).
+                    new ChunkJob(regenData, _chunksManager, _cancellationTokenSource.Token);
+                    jobsDispatchedThisFrame++; // Increment count for this frame
+                }
+                else
+                {
+                    Debug.LogWarning($"Skipping regeneration for chunk {regenData.position} as it no longer exists or has no data.");
+                }
+            }
+            // 2. Process Initial Generation Queue (_chunksToProccess - closest first)
+            // NOTE: Uses the inefficient forward iteration with RemoveAt to preserve order.
+            for (int i = 0; i < _chunksToProccess.Count && jobsDispatchedThisFrame < maxJobsPerFrame; /* No increment */)
             {
                 // Create and start a new generation job for the chunk data at the current index.
+                // Flags typically include Data, Mesh, Collider for initial generation.
                 new ChunkJob(_chunksToProccess[i], _chunksManager, _cancellationTokenSource.Token);
+                jobsDispatchedThisFrame++; // Increment count for this frame
 
                 // Remove the processed chunk data from the list.
                 _chunksToProccess.RemoveAt(i);
                 // Do not increment 'i' because removing shifts subsequent elements down.
-                // The next element to process is now at the current index 'i'.
             }
+
         }
 
         /// <summary>
@@ -234,30 +266,55 @@ namespace VoxelSystem.Factory
         {
             _chunksToProccess = toGenerate ?? new List<GenerationData>();
         }
-
         /// <summary>
-        /// Clears the list of chunks waiting to be processed.
+        /// Adds a request to regenerate the mesh and/or collider for a specific chunk.
+        /// Typically called after a voxel modification.
         /// </summary>
-        public void Dispose()
+        /// <param name="chunkPos">The position (key) of the chunk to regenerate.</param>
+        /// <param name="flags">The components to regenerate (typically Mesh | Collider).</param>
+        public void RequestChunkRegeneration(Vector3 chunkPos, ChunkGenerationFlags flags)
         {
-            _chunksToProccess.Clear();
+            // Create GenerationData containing only the position and the required regen flags.
+            var regenData = new GenerationData
+            {
+                position = chunkPos,
+                // Ensure only Mesh and Collider flags are considered for regeneration requests.
+                flags = flags & (ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider)
+            };
+
+            // Add to the regeneration queue if valid flags are provided.
+            if (regenData.flags != ChunkGenerationFlags.None)
+            {
+                _chunksToRegenerate.Enqueue(regenData);
+            }
+            else
+            {
+                Debug.LogWarning($"RequestChunkRegeneration called for {chunkPos} with no valid flags (Mesh/Collider).");
+            }
         }
+
 
         // --- Private Helper Methods ---
 
-        /// <summary>
-        /// Centralized method for cleaning up resources and cancelling tasks.
-        /// </summary>
+        // Modify CleanupResources to clear the new queue:
         private void CleanupResources()
         {
             if (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
                 Debug.Log("Cleaning up ChunkFactory resources...");
                 Dispose(); // Calls _chunksToProccess.Clear()
+                _chunksToRegenerate.Clear(); // Clear the regeneration queue too
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource.Dispose();
                 Debug.Log("ChunkFactory resources cleaned up.");
             }
+        }
+
+        // Modify Dispose to clear the new queue:
+        public void Dispose()
+        {
+            _chunksToProccess.Clear();
+            _chunksToRegenerate.Clear(); // Clear the regeneration queue too
         }
     }
 }

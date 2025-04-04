@@ -101,10 +101,16 @@ public class Chunk : IDisposable
 
         // Delegate and return success/failure
         bool success = _dataHandler.SetVoxel(voxel, pos);
-        // if (success) Debug.Log($"Voxel set at {pos}, chunk marked Dirty.");
-        // else Debug.Log($"Failed to set voxel at {pos}.");
+        if (success)
+        {
+            Debug.Log($"Voxel set at {pos}, chunk marked Dirty.");
+            Dirty = true;
+        }
+
+        else Debug.Log($"Failed to set voxel at {pos}.");
         return success;
     }
+
     public bool SetVoxel(Voxel voxel, int x, int y, int z)
     {
         return SetVoxel(voxel, new Vector3(x, y, z)); // Convert and call the other overload
@@ -160,8 +166,8 @@ public class Chunk : IDisposable
         // Ensure handlers dispose their resources (NativeArrays, GameObject)
         _dataHandler.Dispose();
         _viewHandler.Dispose();
-        // Null references to help GC (optional)
-        // _chunksManager = null;
+        //Null references to help GC (optional)
+        //_chunksManager = null;
     }
 
     #endregion

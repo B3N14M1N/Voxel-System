@@ -1,4 +1,5 @@
 using UnityEngine;
+using VoxelSystem.Data;
 
 namespace VoxelSystem.Managers
 {
@@ -58,6 +59,24 @@ namespace VoxelSystem.Managers
         /// <param name="cV"></param>
         /// <param name="cI"></param>
         void UpdateChunkColliderSize(int cV, int cI);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        /// <param name="voxel"></param>
+        /// <returns></returns>
+        bool ModifyVoxel(int x, int y, int z, Voxel voxel);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="worldPos"></param>
+        /// <param name="voxel"></param>
+        /// <returns></returns>
+        bool ModifyVoxel(Vector3 worldPos, Voxel voxel);
     }
 
 }

@@ -6,6 +6,7 @@ using System.Threading; // Provides CancellationTokenSource and CancellationToke
 using Unity.VisualScripting; // Used for AddRange extension method on Dictionary (consider replacing if not essential)
 using UnityEditor; // Used for Editor-specific utilities like UnloadUnusedAssetsImmediate (within #if UNITY_EDITOR)
 using UnityEngine; // Provides core Unity types like Vector3, Transform, Time
+using VoxelSystem.Data;
 using VoxelSystem.Data.GenerationFlags; // Contains flags like ChunkGenerationFlags
 using VoxelSystem.Factory; // Contains ChunkFactory for generating chunk data
 
@@ -239,6 +240,146 @@ namespace VoxelSystem.Managers
             ClearChunksAsync(_cancellationTokenSource.Token);
         }
 
+        // --- Voxel Modification API ---
+
+        /// <summary>
+        /// Modifies a single voxel at the specified world position.
+        /// Checks for validity, updates the chunk data, and requests regeneration for
+        /// the modified chunk and potentially affected neighbors if the modification occurs on a border.
+        /// </summary>
+        /// <param name="worldPos">The exact world coordinates of the voxel to modify.</param>
+        /// <param name="voxel">The new voxel data to place. Use Voxel.Empty (or equivalent) to remove.</param>
+        /// <returns>True if the voxel was modified successfully, false otherwise.</returns>
+        public bool ModifyVoxel(Vector3 worldPos, Voxel voxel)
+        {
+            // --- Validation ---
+            bool isRemoving = voxel.ID == 0; // Example check for removal
+            if (!isRemoving && !IsValidVoxelType(voxel))
+            {
+                Debug.LogWarning($"ModifyVoxel failed: Invalid voxel type ID {voxel.ID} provided.");
+                return false;
+            }
+
+            Vector3 chunkKey = WorldSettings.ChunkPositionFromPosition(worldPos);
+            Vector3Int localPos = WorldToLocalCoords(worldPos);
+            Chunk targetChunk = GetChunk(chunkKey);
+
+            if (targetChunk == null)
+            {
+                Debug.LogWarning($"ModifyVoxel failed: Chunk at {chunkKey} not found.");
+                return false;
+            }
+            if (!targetChunk.DataGenerated)
+            {
+                Debug.LogWarning($"ModifyVoxel failed: Chunk at {chunkKey} exists but data is not generated/loaded yet.");
+                return false;
+            }
+
+            // --- Modification ---
+            bool success = targetChunk.SetVoxel(voxel, localPos.x, localPos.y, localPos.z);
+
+            // --- Regeneration Request ---
+            if (success)
+            {
+                // 1. Request regeneration for the primary chunk that was modified.
+                ChunkFactory.Instance.RequestChunkRegeneration(chunkKey, ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider);
+                // Debug.Log($"Voxel modified at {worldPos}. Requested regeneration for chunk {chunkKey}.");
+
+                // 2. Check for border modification and request neighbor regeneration if needed.
+                CheckAndRequestNeighborUpdates(chunkKey, localPos);
+
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning($"ModifyVoxel failed: Chunk.SetVoxel returned false for position {localPos} in chunk {chunkKey}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Overload for ModifyVoxel using integer coordinates.
+        /// </summary>
+        public bool ModifyVoxel(int x, int y, int z, Voxel voxel)
+        {
+            return ModifyVoxel(new Vector3(x, y, z), voxel);
+        }
+
+        /// <summary>
+        /// Checks if a modified voxel at a given local position within a chunk lies on a border.
+        /// If it does, identifies the neighboring chunk(s) and requests their regeneration.
+        /// </summary>
+        /// <param name="modifiedChunkKey">The key/position of the chunk that was modified.</param>
+        /// <param name="localPos">The local coordinates (0 to ChunkSize-1) within the chunk where the modification occurred.</param>
+        private void CheckAndRequestNeighborUpdates(Vector3 modifiedChunkKey, Vector3Int localPos)
+        {
+            // Use a HashSet to avoid queuing the same neighbor multiple times (e.g., for corners)
+            HashSet<Vector3> neighborsToUpdate = new HashSet<Vector3>();
+
+            // Check X-axis borders
+            if (localPos.x == 0)
+            {
+                neighborsToUpdate.Add(modifiedChunkKey + Vector3.left * WorldSettings.ChunkWidth);
+            }
+            else if (localPos.x == WorldSettings.ChunkWidth - 1)
+            {
+                neighborsToUpdate.Add(modifiedChunkKey + Vector3.right * WorldSettings.ChunkWidth);
+            }
+
+            // Check Z-axis borders
+            if (localPos.z == 0)
+            {
+                neighborsToUpdate.Add(modifiedChunkKey + Vector3.back * WorldSettings.ChunkWidth);
+            }
+            else if (localPos.z == WorldSettings.ChunkWidth - 1)
+            {
+                neighborsToUpdate.Add(modifiedChunkKey + Vector3.forward * WorldSettings.ChunkWidth);
+            }
+
+            // --- Request Regeneration for identified neighbors ---
+            foreach (Vector3 neighborKey in neighborsToUpdate)
+            {
+                // Check if the neighbor chunk exists and has data loaded before requesting regen
+                Chunk neighborChunk = GetChunk(neighborKey);
+                if (neighborChunk != null && neighborChunk.DataGenerated)
+                {
+                    // Debug.Log($"Modification at border ({localPos}) of chunk {modifiedChunkKey}. Requesting regeneration for neighbor {neighborKey}.");
+                    ChunkFactory.Instance.RequestChunkRegeneration(neighborKey, ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider);
+                }
+                // else: Neighbor doesn't exist or isn't ready, no regen needed/possible for it now.
+            }
+        }
+        private Vector3Int WorldToLocalCoords(Vector3 worldPos)
+        {
+            // Calculates the remainder after dividing by chunk size
+            int localX = Mathf.FloorToInt(worldPos.x) % WorldSettings.ChunkWidth;
+            int localY = Mathf.FloorToInt(worldPos.y); // Y is often absolute within chunk height
+            int localZ = Mathf.FloorToInt(worldPos.z) % WorldSettings.ChunkWidth;
+
+            // Handle negative coordinates correctly for modulo
+            if (localX < 0) localX += WorldSettings.ChunkWidth;
+            if (localZ < 0) localZ += WorldSettings.ChunkWidth;
+
+            // Clamp Y coordinate if necessary
+            localY = Mathf.Clamp(localY, 0, WorldSettings.ChunkHeight - 1);
+
+            return new Vector3Int(localX, localY, localZ);
+        }
+
+        // --- Validation Helper (Example) ---
+
+        /// <summary>
+        /// Placeholder for validating a voxel type.
+        /// Implement this based on your voxel registry or data.
+        /// </summary>
+        /// <param name="voxel">The voxel type to check.</param>
+        /// <returns>True if the voxel type is valid, false otherwise.</returns>
+        private bool IsValidVoxelType(Voxel voxel)
+        {
+            // Example: Check against a known range of IDs or a registry
+            // return voxel.ID > 0 && voxel.ID < MaxVoxelTypes;
+            return true; // Replace with actual validation logic
+        }
 
         // --- Chunk State Management ---
 
