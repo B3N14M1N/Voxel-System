@@ -45,7 +45,7 @@ public class ChunkJob
         if ((GenerationData.flags & ChunkGenerationFlags.Data) != 0)
         {
             var parameters = ChunkFactory.Instance.NoiseParameters;
-            var octaves = ChunkFactory.Instance.NoiseOctaves;
+            var octaves = ChunkFactory.Instance.NoiseParameters.OctaveOffsets;
             chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
             DataScheduled = true;
             Completed = false;
