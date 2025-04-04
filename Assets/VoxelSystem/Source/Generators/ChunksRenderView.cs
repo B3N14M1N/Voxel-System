@@ -32,7 +32,7 @@ public class ChunksRenderView
 
     public void Dispose()
     {
-        if(Chunks.IsCreated) Chunks.Dispose();
+        if (Chunks.IsCreated) Chunks.Dispose();
     }
 
     ~ChunksRenderView()
@@ -40,7 +40,7 @@ public class ChunksRenderView
         Dispose();
     }
 
-    [BurstCompile]
+    [BurstCompile(OptimizeFor = OptimizeFor.Performance)]
     protected struct ChunksFilterJob : IJob
     {
         [ReadOnly] public Vector3 Center;
@@ -48,11 +48,8 @@ public class ChunksRenderView
 
         public NativeArray<float3> Chunks;
 
-
-        float ChunkRangeMagnitude(Vector3 center, Vector3 position)
-        {
-            return (position.x - center.x) * (position.x - center.x) + (position.z - center.z) * (position.z - center.z);
-        }
+        private readonly float ChunkRangeMagnitude(Vector3 center, Vector3 position)
+            => (position.x - center.x) * (position.x - center.x) + (position.z - center.z) * (position.z - center.z);
 
         public void Execute()
         {
@@ -61,7 +58,7 @@ public class ChunksRenderView
             {
                 for (int z = (int)Center.z - Range; z <= (int)Center.z + Range; z++)
                 {
-                    float3 position = new float3(x, 0, z);
+                    float3 position = new(x, 0, z);
                     position.y = ChunkRangeMagnitude(Center, position);
                     Chunks[count++] = position;
                 }
@@ -89,8 +86,8 @@ public class ChunksRenderView
 
             // Create temp vectors
             NativeArray<float3>
-                L = new NativeArray<float3>(n1, Allocator.Temp, NativeArrayOptions.UninitializedMemory),
-                R = new NativeArray<float3>(n2, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                L = new(n1, Allocator.Temp, NativeArrayOptions.UninitializedMemory),
+                R = new(n2, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
             int i, j;
             // Copy data to temp vectors L[] and R[]
@@ -135,6 +132,5 @@ public class ChunksRenderView
             if (L.IsCreated) L.Dispose();
             if (R.IsCreated) R.Dispose();
         }
-
     }
 }

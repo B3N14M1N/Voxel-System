@@ -46,7 +46,7 @@ namespace VoxelSystem.Generators
                 if (chunk != null)
                 {
                     var collider = colliderData.GenerateMesh();
-                    chunk.UpdateCollider(ref collider);
+                    chunk.UploadCollider(collider);
                 }
                 else
                 {
@@ -65,7 +65,8 @@ namespace VoxelSystem.Generators
             colliderData.Dispose();
         }
 
-        [BurstCompile]
+        // --- The Burst Compiled Job ---
+        [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
         internal struct ChunkColliderJob : IJob
         {
             #region Input

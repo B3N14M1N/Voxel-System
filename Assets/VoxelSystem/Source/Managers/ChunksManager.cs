@@ -189,7 +189,7 @@ namespace VoxelSystem.Managers
             if (chunk == null)
             {
                 chunk = GetPooledChunk();
-                chunk.UpdateChunk(pos);
+                chunk.Reuse(pos);
                 chunk.Active = true;
                 chunk.Render = true;
             }

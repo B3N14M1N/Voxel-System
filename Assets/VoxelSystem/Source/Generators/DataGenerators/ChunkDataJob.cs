@@ -214,7 +214,7 @@ namespace VoxelSystem.Generators
 
 
         // --- The Burst Compiled Job ---
-        [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard)] // Adjust precision as needed
+        [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
         internal struct ChunkDataJob : IJobParallelFor
         {
             // --- Input Settings (Read Only) ---
@@ -331,7 +331,7 @@ namespace VoxelSystem.Generators
                 Voxel sand = new() { ID = (byte)VoxelType.sand };
 
                 //Voxel water = CreateVoxel(VoxelType.water, VoxelPhysicsType.liquid); // Assuming water exists
-                Voxel air = Voxel.EmptyVoxel; // Air
+                Voxel air = Voxel.Empty; // Air
 
 
                 for (int y = 0; y < chunkHeight; y++)

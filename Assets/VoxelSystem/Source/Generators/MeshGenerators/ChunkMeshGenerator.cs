@@ -54,7 +54,7 @@ namespace VoxelSystem.Generators
                 {
                     var mesh = meshData.GenerateMesh();
                     //Debug.Log(mesh.vertexCount);
-                    chunk.UploadMesh(ref mesh);
+                    chunk.UploadMesh(mesh);
                 }
                 else
                 {

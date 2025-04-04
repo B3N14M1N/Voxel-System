@@ -141,7 +141,7 @@ namespace VoxelSystem.Generators
                 if (chunk != null)
                 {
                     var mesh = meshData.GenerateMesh();
-                    chunk.UploadMesh(ref mesh);
+                    chunk.UploadMesh(mesh);
                 }
                 else
                 {
@@ -170,7 +170,8 @@ namespace VoxelSystem.Generators
         }
         #endregion
 
-        [BurstCompile]
+        // --- The Burst Compiled Job ---
+        [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
         internal struct ChunkParallelMeshJob : IJobParallelFor
         {
             #region Input

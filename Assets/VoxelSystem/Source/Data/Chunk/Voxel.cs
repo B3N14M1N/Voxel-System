@@ -15,7 +15,7 @@ namespace VoxelSystem.Data
     public struct Voxel
     {
         public readonly bool IsEmpty => ID == 0;
-        public static Voxel EmptyVoxel => new();
+        public static Voxel Empty => new();
 
         public byte ID;
 

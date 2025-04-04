@@ -175,7 +175,7 @@ public struct ChunkDataJob : IJobParallelFor
         int z = index % (chunkWidth + 2);
 
         Voxel solid = new Voxel() { ID = 1 };
-        Voxel emptyVoxel = Voxel.EmptyVoxel;
+        Voxel emptyVoxel = Voxel.Empty;
         HeightMap heightMap = new HeightMap() { data = 0 };
         int height;
 
