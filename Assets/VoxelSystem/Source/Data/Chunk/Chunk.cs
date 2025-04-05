@@ -103,7 +103,7 @@ public class Chunk : IDisposable
         bool success = _dataHandler.SetVoxel(voxel, pos);
         if (success)
         {
-            Debug.Log($"Voxel set at {pos}, chunk marked Dirty.");
+            //Debug.Log($"Voxel set at {pos}, chunk marked Dirty.");
             Dirty = true;
         }
 
@@ -116,6 +116,15 @@ public class Chunk : IDisposable
         return SetVoxel(voxel, new Vector3(x, y, z)); // Convert and call the other overload
     }
 
+    public bool UpdateHeightMapBorder(int x, int z, bool isRemoving)
+    {
+        return _dataHandler.UpdateHeightMapBorder(x, z, isRemoving);
+    }
+
+    public bool UpdateHeightMapBorder(Vector2 pos, bool isRemoving)
+    {
+        return _dataHandler.UpdateHeightMapBorder(pos, isRemoving);
+    }
     #endregion
 
     #region Mesh & Data Upload (Delegated)

@@ -248,57 +248,81 @@ namespace VoxelSystem.Generators
             #endregion
 
             #region Execution
-            public unsafe void Execute(int index)
+            public void Execute(int index)
             {
                 int x = index / (chunkWidth + 2);
                 int z = index % (chunkWidth + 2);
-                if (x >= 1 && z >= 1 && x <= chunkWidth && z <= chunkWidth)
+
+                if (!(x >= 1 && z >= 1 && x <= chunkWidth && z <= chunkWidth)) return;
+
+                NativeArray<uint> neighbourHeights = new(4, Allocator.Temp);
+                uint maxHeight = heightMaps[GetMapIndex(x, z)].GetSolid() - 1;
+                uint min = maxHeight;
+
+                for (int i = 0; i < 4; i++)
                 {
-                    int maxHeight = (int)(heightMaps[GetMapIndex(x, z)].GetSolid()) - 1;
-                    for (int y = maxHeight; y >= 0; y--)
-                    {
-                        Voxel voxel = voxels[GetVoxelIndex(x, y, z)];
-
-                        if (voxel.IsEmpty)
-                            continue;
-
-                        float3 voxelPos = new(x - 1, y, z - 1);
-
-                        bool surrounded = true;
-
-                        for (int i = 0; i < 6; i++)
-                        {
-                            float3 face = FaceCheck[i];
-
-                            if (!(y == chunkHeight - 1 && i == 4)) // highest and top face
-                            {
-                                if (y == 0 && i == 5) // lowest and bottom face
-                                    continue;
-                                int faceCheckIndex = GetVoxelIndex(x + (int)face.x, y + (int)face.y, z + (int)face.z);
-                                if (voxels[faceCheckIndex].GetVoxelType() != 0)
-                                    continue;
-                            }
-
-                            surrounded = false;
-
-                            int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr<int>()[0], 4);
-                            int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr<int>()[0], 6);
-
-                            for (int j = 0; j < 4; j++)
-                            {
-                                meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[i * 4 + j]] + voxelPos, i, j, y, voxel.ID);
-                            }
-                            for (int k = 0; k < 6; k++)
-                            {
-                                meshData.indices[tris - 6 + k] = verts - 4 + FaceIndices[k];
-                            }
-                        }
-                        if (surrounded)
-                            y = -1;
-                    }
+                    float3 face = FaceCheck[i];
+                    neighbourHeights[i] = heightMaps[GetMapIndex(x + (int)face.x, z + (int)face.z)].GetSolid() - 1;
+                    if (neighbourHeights[i] < min)
+                        min = neighbourHeights[i];
                 }
+
+                for (uint y = maxHeight; y >= min; y--)
+                {
+                    Voxel voxel = voxels[GetVoxelIndex(x, (int)y, z)];
+
+                    if (voxel.IsEmpty)
+                        continue;
+
+                    /*
+                    for (int i = 0; i < 6; i++)
+                    {
+                        // if its not the highest voxel possible in the
+                        // chunk and the top face, then do the checks
+                        if (!(y == chunkHeight - 1 && i == 4))
+                        {
+                            if (i == 5 || // skip bottom face
+                                (i == 4 && y < maxHeight) || // skip top face if its not the top voxel
+                                (i < 4 && y <= neighbourHeights[i])) // skip side faces if it can't be seen by the player
+                                continue;
+                        }
+
+                        AddFace(i, new(x - 1, y, z - 1), voxel);
+                    }
+                    */
+                    for (int i = 0; i < 5; i++) // i == 5 skip bottom face
+                    {
+                        if (!(y == chunkHeight - 1 && i == 4) || !(y == 0 && i == 5))
+                        {
+                            if ((i == 4 && y < maxHeight) || // skip top face if its not the top voxel
+                            (i < 4 && y <= neighbourHeights[i])) // skip side faces if it can't be seen by the player
+                                continue;
+                        }
+
+                        AddFace(i, new(x - 1, y, z - 1), voxel);
+                    }
+
+                }
+
+                if (neighbourHeights.IsCreated) neighbourHeights.Dispose();
             }
             #endregion
+
+            private unsafe void AddFace(int faceIndice, float3 voxelPos, Voxel voxel)
+            {
+                int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr<int>()[0], 4);
+                int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr<int>()[0], 6);
+
+                for (int j = 0; j < 4; j++)
+                {
+                    meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[faceIndice * 4 + j]] + voxelPos, faceIndice, j, (int)voxelPos.y, voxel.ID);
+                }
+                for (int k = 0; k < 6; k++)
+                {
+                    meshData.indices[tris - 6 + k] = verts - 4 + FaceIndices[k];
+                }
+
+            }
         }
     }
 

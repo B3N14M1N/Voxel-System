@@ -66,23 +66,14 @@ namespace VoxelSystem.Generators
         }
 
         // --- The Burst Compiled Job ---
-        [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
+        [BurstCompile(CompileSynchronously = false, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
         internal struct ChunkColliderJob : IJob
         {
-            #region Input
             [ReadOnly] public int chunkWidth;
             [ReadOnly] public int chunkHeight;
-            [ReadOnly]
-            [NativeDisableContainerSafetyRestriction]
-            public NativeArray<HeightMap> heightMap;
-            #endregion
 
-            #region Output
-            [NativeDisableContainerSafetyRestriction]
-            public MeshDataStruct colliderData;
-            #endregion
-
-            private readonly int GetMapIndex(int x, int z) => z + (x * (chunkWidth + 2));
+            [NativeDisableContainerSafetyRestriction][ReadOnly]public NativeArray<HeightMap> heightMap;
+            [NativeDisableContainerSafetyRestriction] public MeshDataStruct colliderData;
 
             public void Execute()
             {
@@ -146,6 +137,8 @@ namespace VoxelSystem.Generators
 
                 vertexMap.Dispose();
             }
+
+            private readonly int GetMapIndex(int x, int z) => z + (x * (chunkWidth + 2));
 
             private int AddVertex(ref NativeHashMap<int3, int> vertexMap, float3 position)
             {

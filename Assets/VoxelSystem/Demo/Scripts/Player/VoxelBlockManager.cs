@@ -309,12 +309,12 @@ public class VoxelBlockManager : MonoBehaviour
         if (success)
         {
             // Optional: Add sound effects, particle effects, etc.
-            Debug.Log($"Placed block of type {_blockType} at {position}");
+            //Debug.Log($"Placed block of type {_blockType} at {position}");
         }
         else
         {
             // Optional: Provide feedback if placement failed (e.g., trying to place in air, blocked by other logic)
-            Debug.LogWarning($"Failed to place block of type {_blockType} at {position}. ModifyVoxel returned false.");
+            //Debug.LogWarning($"Failed to place block of type {_blockType} at {position}. ModifyVoxel returned false.");
         }
     }
 
@@ -341,12 +341,12 @@ public class VoxelBlockManager : MonoBehaviour
         if (success)
         {
             // Optional: Add sound effects, particle effects, etc.
-            Debug.Log($"Removed block at {position}");
+            //Debug.Log($"Removed block at {position}");
         }
         else
         {
             // Optional: Provide feedback if removal failed (e.g., trying to remove bedrock, out of bounds)
-            Debug.LogWarning($"Failed to remove block at {position}. ModifyVoxel returned false.");
+            //Debug.LogWarning($"Failed to remove block at {position}. ModifyVoxel returned false.");
         }
     }
 
