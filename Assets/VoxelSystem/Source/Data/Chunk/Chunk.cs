@@ -10,7 +10,6 @@ public class Chunk : IDisposable
     private readonly ChunkDataHandler _dataHandler;
     private readonly ChunkViewHandler _viewHandler;
     private readonly IChunksManager _chunksManager; // Keep reference if needed by handlers or logic here
-
     #region Properties (Delegated or Direct)
 
     public Vector3 Position { get; private set; }
@@ -29,7 +28,6 @@ public class Chunk : IDisposable
     // View properties delegated
     public bool MeshGenerated => _viewHandler.IsMeshGenerated;
     public bool ColliderGenerated => _viewHandler.IsColliderGenerated;
-    public Transform Parent { get => _viewHandler.Parent; set => _viewHandler.Parent = value; }
     public bool Active { get => _viewHandler.IsActive; set => _viewHandler.IsActive = value; }
     public bool Render { get => _viewHandler.IsRenderEnabled; set => _viewHandler.IsRenderEnabled = value; }
 
@@ -42,7 +40,7 @@ public class Chunk : IDisposable
             // Original logic: Clearing data when simulation stops
             if (value == false)
             {
-                _dataHandler.ClearData();
+                _dataHandler.Dispose();
             }
             // Add logic here if setting Simulate=true should trigger something (e.g., collider generation if not ready)
         }
@@ -57,7 +55,7 @@ public class Chunk : IDisposable
     #region Constructor and Setup
 
     // Constructor now requires the manager
-    public Chunk(Vector3 position, IChunksManager chunksManager, Transform defaultParent = null)
+    public Chunk(Vector3 position, IChunksManager chunksManager, LayerMask layerMask = default, Transform defaultParent = null)
     {
         Position = position;
         _chunksManager = chunksManager;
@@ -65,24 +63,17 @@ public class Chunk : IDisposable
         _viewHandler = new ChunkViewHandler(chunksManager); // Pass manager for callbacks
 
         // Create GameObject instance immediately or lazily? Original code created it immediately.
-        _viewHandler.CreateInstance(position, defaultParent);
+        _viewHandler.CreateInstance(position, defaultParent, layerMask);
     }
 
     // Used by ChunksManager when reusing pooled chunks
     public void Reuse(Vector3 newPosition)
     {
-        Reuse(newPosition, Parent);
-    }
-
-    // Used by ChunksManager when reusing pooled chunks
-    public void Reuse(Vector3 newPosition, Transform parent)
-    {
         Position = newPosition;
         // Reset state flags (data might still be dirty from previous use if not saved)
-        _dataHandler.ClearData(); // Clear any old data
+        _dataHandler.Dispose();
         _viewHandler.PrepareForPooling(); // Clears mesh/collider, resets name
         _viewHandler.UpdateInstanceTransform(newPosition); // Set new position/name
-        Parent = parent; // Set parent
         Active = false; // Start inactive/invisible
         Render = false;
         // Do NOT reset IsDirty here - let manager decide if loading overwrites dirty state
@@ -165,7 +156,7 @@ public class Chunk : IDisposable
         if (Dirty)
             Debug.Log($"Chunk {Position} needs saving before clearing."); // Add saving logic hook here
 
-        _dataHandler.ClearData(); // Clear voxel/heightmap NativeArrays
+        _dataHandler.Dispose();
         _viewHandler.PrepareForPooling(); // Clear meshes, set inactive, reset name
     }
 

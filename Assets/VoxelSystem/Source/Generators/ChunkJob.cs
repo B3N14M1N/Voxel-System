@@ -1,167 +1,168 @@
 using Cysharp.Threading.Tasks;
-using JetBrains.Annotations;
 using System;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;
 
+/// <summary>
+/// Represents and manages the process of generating different components (data, mesh, collider) for a single chunk based on specified flags.
+/// </summary>
 public class ChunkJob
 {
-    private ChunkDataGenerator chunkDataGenerator;
-    private ChunkColliderGenerator chunkColliderGenerator;
-    private ChunkMeshGenerator chunkMeshGenerator;
-    private ChunkParallelMeshGenerator chunkParallelMeshGenerator;
+
+    private ChunkDataGenerator _chunkDataGenerator;
+    private ChunkColliderGenerator _chunkColliderGenerator;
+    private ChunkParallelMeshGenerator _chunkParallelMeshGenerator;
     private readonly IChunksManager _chunksManager;
+    private readonly Chunk _chunk;
+    private readonly bool _regenerating = false;
+    private bool _completed = false;
+    private bool _dataScheduled;
+    private bool _colliderScheduled;
+    private bool _meshScheduled;
 
-    public static int Processed { get; private set; }
-    private bool _regenerating = false;
+    /// <summary>
+    /// Gets the generation data associated with this job, including position and flags.
+    /// </summary>
     public GenerationData GenerationData { get; private set; }
-    private bool Completed = false;
 
-    private bool DataScheduled;
+    /// <summary>
+    /// Static counter tracking the number of active or processed jobs.
+    /// </summary>
+    public static int Processed { get; private set; }
 
-    private bool ColliderScheduled;
-
-    private bool MeshScheduled;
-
-    private Chunk chunk;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChunkJob"/> class, setting up the required generators based on flags and starting the process.
+    /// </summary>
     public ChunkJob(GenerationData generationData,
         IChunksManager chunksManager,
         CancellationToken cancellationToken)
     {
-
         GenerationData = generationData;
-        Completed = true;
-        DataScheduled = false;
-        ColliderScheduled = false;
-        MeshScheduled = false;
+        _completed = true;
+        _dataScheduled = false;
+        _colliderScheduled = false;
+        _meshScheduled = false;
         _chunksManager = chunksManager;
 
         if ((GenerationData.flags & ChunkGenerationFlags.Data) != 0)
         {
             var parameters = ChunkFactory.Instance.NoiseParameters;
-            var octaves = ChunkFactory.Instance.NoiseParameters.OctaveOffsets;
-            chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
-            DataScheduled = true;
-            Completed = false;
+            _chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
+            _dataScheduled = true;
+            _completed = false;
             Processed += 1;
         }
         else
         {
-            chunk = _chunksManager?.GetChunk(GenerationData.position);
-            if (chunk != null)
+            _chunk = _chunksManager?.GetChunk(GenerationData.position);
+            if (_chunk != null)
             {
-
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
                 {
-                    chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref chunk.HeightMap, _chunksManager);
-                    ColliderScheduled = true;
+                    _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
+                    _colliderScheduled = true;
                     _regenerating = true;
-                    Completed = false;
+                    _completed = false;
                 }
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
-                    //chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap);
-                    chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap, _chunksManager);
-                    MeshScheduled = true;
+                    _chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
+                    _meshScheduled = true;
                     _regenerating = true;
-                    Completed = false;
+                    _completed = false;
                 }
             }
         }
-        if (!Completed)
+
+        if (!_completed)
         {
             _chunksManager?.SetChunkToGenerating(GenerationData.position);
-            chunk = _chunksManager?.GetChunk(GenerationData.position);
+            _chunk = _chunksManager?.GetChunk(GenerationData.position);
         }
 
         StartGenerating(cancellationToken);
     }
 
+    /// <summary>
+    /// Checks the status of scheduled generation tasks (data, collider, mesh) and processes their completion, potentially scheduling subsequent tasks.
+    /// </summary>
+    /// <returns>True if the entire job (all requested flags) is completed, false otherwise.</returns>
     public bool Complete()
     {
-        if (DataScheduled && chunkDataGenerator.IsComplete)
+        if (_dataScheduled && _chunkDataGenerator.IsComplete)
         {
-            DataScheduled = true;
-            DataScheduled = false;
-            GenerationData = chunkDataGenerator.Complete();
+            _dataScheduled = true; // Original code had this redundant assignment
+            _dataScheduled = false;
+            GenerationData = _chunkDataGenerator.Complete();
 
             if (GenerationData.flags == ChunkGenerationFlags.None)
             {
                 _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                Completed = true;
+                _completed = true;
                 Dispose();
                 Processed -= 1;
             }
             else
             {
-                //Chunk chunk = ChunksManager.Instance.GetChunk(GenerationData.position);
-
-                // if the flags wants a collider, continue _generating
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
                 {
-                    chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref chunk.HeightMap, _chunksManager);
-                    ColliderScheduled = true;
+                    _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
+                    _colliderScheduled = true;
                 }
-
-                // if the flags wants a mesh, continue _generating
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
-                    //chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap);
-                    chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap, _chunksManager);
-                    MeshScheduled = true;
+                    _chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
+                    _meshScheduled = true;
                 }
             }
-            chunkDataGenerator = null;
-            return Completed;
+            _chunkDataGenerator = null;
+            return _completed;
         }
 
-        if (ColliderScheduled && chunkColliderGenerator.IsComplete)
+        if (_colliderScheduled && _chunkColliderGenerator.IsComplete)
         {
-            ColliderScheduled = false;
-            GenerationData = chunkColliderGenerator.Complete();
+            _colliderScheduled = false;
+            GenerationData = _chunkColliderGenerator.Complete();
 
             if (GenerationData.flags == ChunkGenerationFlags.None)
             {
                 _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                Completed = true;
+                _completed = true;
                 Dispose();
                 if (_regenerating == false)
                     Processed -= 1;
             }
-            chunkColliderGenerator = null;
-            return Completed;
+            _chunkColliderGenerator = null;
+            return _completed;
         }
 
-        if (MeshScheduled && chunkParallelMeshGenerator.IsComplete)//chunkMeshGenerator.IsComplete)
+        if (_meshScheduled && _chunkParallelMeshGenerator.IsComplete)
         {
-            MeshScheduled = false;
-            //GenerationData = chunkMeshGenerator.Complete();
-            GenerationData = chunkParallelMeshGenerator.Complete();
+            _meshScheduled = false;
+            GenerationData = _chunkParallelMeshGenerator.Complete();
 
             if (GenerationData.flags == ChunkGenerationFlags.None)
             {
                 _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                Completed = true;
+                _completed = true;
                 Dispose();
                 if (_regenerating == false)
                     Processed -= 1;
             }
-            //chunkMeshGenerator = null;
-            chunkParallelMeshGenerator = null;
-            return Completed;
+            _chunkParallelMeshGenerator = null;
+            return _completed;
         }
 
-        return Completed;
+        return _completed;
     }
 
-
+    /// <summary>
+    /// Asynchronously waits until the generation job is fully completed or cancellation is requested.
+    /// </summary>
     public async void StartGenerating(CancellationToken cancellationToken)
     {
         try
@@ -174,15 +175,13 @@ public class ChunkJob
         }
     }
 
+    /// <summary>
+    /// Disposes the internal generator instances used by this job.
+    /// </summary>
     public void Dispose(bool disposeData = false)
     {
-        if (chunkDataGenerator != null)
-            chunkDataGenerator.Dispose(disposeData);
-        if (chunkMeshGenerator != null)
-            chunkMeshGenerator.Dispose();
-        if (chunkParallelMeshGenerator != null)
-            chunkParallelMeshGenerator.Dispose();
-        if (chunkColliderGenerator != null)
-            chunkColliderGenerator.Dispose();
+        _chunkDataGenerator?.Dispose(disposeData);
+        _chunkParallelMeshGenerator?.Dispose();
+        _chunkColliderGenerator?.Dispose();
     }
 }

@@ -230,7 +230,7 @@ namespace VoxelSystem.Generators
                 return z + (x * (chunkWidth + 2));
             }
 
-            public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, ushort id)
+            public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, byte id)
             {
                 uint x = (uint)uvIndex;
                 x <<= 3;
@@ -256,13 +256,13 @@ namespace VoxelSystem.Generators
                 if (!(x >= 1 && z >= 1 && x <= chunkWidth && z <= chunkWidth)) return;
 
                 NativeArray<uint> neighbourHeights = new(4, Allocator.Temp);
-                uint maxHeight = heightMaps[GetMapIndex(x, z)].GetSolid() - 1;
+                uint maxHeight = (uint)(heightMaps[GetMapIndex(x, z)].GetSolid() - 1);
                 uint min = maxHeight;
 
                 for (int i = 0; i < 4; i++)
                 {
                     float3 face = FaceCheck[i];
-                    neighbourHeights[i] = heightMaps[GetMapIndex(x + (int)face.x, z + (int)face.z)].GetSolid() - 1;
+                    neighbourHeights[i] = (uint)(heightMaps[GetMapIndex(x + (int)face.x, z + (int)face.z)].GetSolid() - 1);
                     if (neighbourHeights[i] < min)
                         min = neighbourHeights[i];
                 }
@@ -315,7 +315,7 @@ namespace VoxelSystem.Generators
 
                 for (int j = 0; j < 4; j++)
                 {
-                    meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[faceIndice * 4 + j]] + voxelPos, faceIndice, j, (int)voxelPos.y, voxel.ID);
+                    meshData.vertices[verts - 4 + j] = PackVertexData(Vertices[FaceVerticeIndex[faceIndice * 4 + j]] + voxelPos, faceIndice, j, (int)voxelPos.y, (byte)voxel.GetVoxelType());
                 }
                 for (int k = 0; k < 6; k++)
                 {

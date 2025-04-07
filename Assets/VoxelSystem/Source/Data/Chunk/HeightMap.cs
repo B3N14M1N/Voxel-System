@@ -5,38 +5,19 @@ namespace VoxelSystem.Data
     [Serializable]
     public struct HeightMap
     {
-        private static readonly uint SOLID_MASK = 0x000000FF;
-        private static readonly uint EXCLUDE_SOLID_MASK = 0xFFFFFF00;
+        private byte _solid;
 
-        private static readonly uint LIQUID_BOTTOM_MASK = 0x0000FF00;
-        private static readonly uint EXCLUDE_LIQUID_BOTTOM_MASK = 0xFFFF00FF;
-
-        private static readonly uint LIQUID_TOP_MASK = 0x00FF0000;
-        private static readonly uint EXCLUDE_LIQUID_TOP_MASK = 0xFF00FFFF;
-
-        public uint data;
-
-
-        public void SetSolid(uint height)
+        public HeightMap(byte solid)
         {
-            data = (data & EXCLUDE_SOLID_MASK) + height;
+            _solid = solid;
         }
 
-        public void SetLiquidTop(uint height)
+        public void SetSolid(byte height)
         {
-            data = (data & EXCLUDE_LIQUID_TOP_MASK) + (height << 16);
+            _solid = height;
         }
 
-        public void SetLiquidBottom(uint height)
-        {
-            data = (data & EXCLUDE_LIQUID_BOTTOM_MASK) + (height << 8);
-        }
-
-        public readonly uint GetSolid() => data & SOLID_MASK;
-
-        public readonly uint GetLiquidTop() => (data & LIQUID_TOP_MASK) >> 16;
-
-        public readonly uint GetLiquidBottom() => (data & LIQUID_BOTTOM_MASK) >> 8;
+        public readonly byte GetSolid() => _solid;
     };
 
 }

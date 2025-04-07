@@ -1373,6 +1373,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 454752410}
   m_CullTransparentMesh: 1
+--- !u!1 &569333335
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 569333336}
+  m_Layer: 0
+  m_Name: ChunksHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &569333336
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569333335}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &596065419
 GameObject:
   m_ObjectHideFlags: 0
@@ -1903,7 +1934,8 @@ MonoBehaviour:
   blockPrefab: {fileID: 388521249733482144, guid: ca80a6db6bcf59a43b5954850319f6d9, type: 3}
   terrainLayer:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 64
+  previewColliderSize: {x: 1, y: 1, z: 1}
 --- !u!1 &688594022
 GameObject:
   m_ObjectHideFlags: 0
@@ -2317,7 +2349,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e546fb71e97b5428c3e46d4e9737a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _parent: {fileID: 669034330}
+  _chunksParent: {fileID: 569333336}
+  _chunkLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
   _blocks: {fileID: 11400000, guid: a03615c4a48530a4e969f13bf7e511bd, type: 2}
   _blockManager: {fileID: 669034335}
 --- !u!114 &958056437
@@ -4806,6 +4841,7 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 669034330}
+  - {fileID: 569333336}
   - {fileID: 2077513780}
   - {fileID: 410087041}
   - {fileID: 832575519}

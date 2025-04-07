@@ -1,58 +1,72 @@
 using System;
 using Unity.Collections;
 using UnityEngine;
-using VoxelSystem.Data; // For Voxel, HeightMap structs
+using VoxelSystem.Data;
 
 public class ChunkDataHandler : IDisposable
 {
+    private static int _paddedWidth = WorldSettings.ChunkWidth + 2;
+    private static int _height = WorldSettings.ChunkHeight;
+    private static int _paddedWidthSq = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
+
     private NativeArray<Voxel> _voxels;
     private NativeArray<HeightMap> _heightMap;
 
-    // Calculate dimensions including padding once for clarity
-    private readonly int _paddedWidth = WorldSettings.ChunkWidth + 2;
-    private readonly int _height = WorldSettings.ChunkHeight;
-    private readonly int _paddedWidthSq = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2); // For heightmap indexing
-
+    /// <summary>
+    /// Gets a value indicating whether the core voxel and heightmap data has been generated and assigned.
+    /// </summary>
     public bool IsDataGenerated { get; private set; }
-    public bool IsDirty { get; set; } // True on successful SetVoxel
 
-    // Provide direct access only if absolutely necessary for external generators.
+    /// <summary>
+    /// Gets or sets a value indicating whether the chunk data has been modified since generation.
+    /// </summary>
+    public bool IsDirty { get; set; }
+
+    /// <summary>
+    /// Provides direct reference access to the internal voxel data array. Use with caution.
+    /// </summary>
     public ref NativeArray<Voxel> VoxelsRef => ref _voxels;
+
+    /// <summary>
+    /// Provides direct reference access to the internal heightmap data array. Use with caution.
+    /// </summary>
     public ref NativeArray<HeightMap> HeightMapRef => ref _heightMap;
 
     public ChunkDataHandler()
     {
         IsDataGenerated = false;
         IsDirty = false;
-        // NativeArrays are typically created/assigned in UploadData
     }
 
+    // --- Public Methods ---
+
     /// <summary>
-    /// Takes ownership of newly generated data arrays. Validates array sizes.
+    /// Takes ownership of generated data arrays, validating sizes. Disposes previous data.
     /// </summary>
     public void UploadData(ref NativeArray<Voxel> newVoxels, ref NativeArray<HeightMap> newHeightMap)
     {
-        DisposeBuffers(); // Dispose previous arrays
-
-        // Validate incoming array sizes against expected padded dimensions
-        int expectedVoxelLength = _paddedWidth * _height * _paddedWidth; // Based on user index formula layout X->Y->Z
+        Dispose();
+        _paddedWidth = WorldSettings.ChunkWidth + 2;
+        _height = WorldSettings.ChunkHeight;
+        _paddedWidthSq = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
+        int expectedVoxelLength = _paddedWidth * _height * _paddedWidth;
         int expectedHeightMapLength = _paddedWidthSq;
 
         bool sizeMismatch = false;
+
         if (!newVoxels.IsCreated || newVoxels.Length != expectedVoxelLength)
         {
-            Debug.LogError($"ChunkDataHandler: Incorrect voxel array length provided or array not created. Expected {expectedVoxelLength}, got {newVoxels.Length}.");
+            Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}.");
             sizeMismatch = true;
         }
         if (!newHeightMap.IsCreated || newHeightMap.Length != expectedHeightMapLength)
         {
-            Debug.LogError($"ChunkDataHandler: Incorrect heightmap array length provided or array not created. Expected {expectedHeightMapLength}, got {newHeightMap.Length}.");
+            Debug.LogError($"ChunkDataHandler: Incorrect heightmap array length. Expected {expectedHeightMapLength}, got {newHeightMap.Length}.");
             sizeMismatch = true;
         }
 
         if (sizeMismatch)
         {
-            // Dispose potentially invalid incoming arrays if they were created
             if (newVoxels.IsCreated) newVoxels.Dispose();
             if (newHeightMap.IsCreated) newHeightMap.Dispose();
             IsDataGenerated = false;
@@ -60,23 +74,19 @@ public class ChunkDataHandler : IDisposable
             return;
         }
 
-        // Sizes are correct, take ownership
         _voxels = newVoxels;
         _heightMap = newHeightMap;
-
         IsDataGenerated = true;
-        IsDirty = false; // Freshly uploaded data is not considered dirty
+        IsDirty = false;
     }
 
     /// <summary>
     /// Gets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1).
-    /// Handles mapping to the internal padded array.
     /// </summary>
     public Voxel GetVoxel(int x, int y, int z)
     {
-        if (!IsDataGenerated || !_voxels.IsCreated) return Voxel.Empty; // Data not ready
+        if (!IsDataGenerated || !_voxels.IsCreated) return Voxel.Empty;
 
-        // Validate input coordinates are within chunk bounds (0 to Dim-1)
         if (x < 0 || x >= WorldSettings.ChunkWidth ||
             y < 0 || y >= WorldSettings.ChunkHeight ||
             z < 0 || z >= WorldSettings.ChunkWidth)
@@ -84,152 +94,153 @@ public class ChunkDataHandler : IDisposable
             Debug.LogWarning($"GetVoxel called with out-of-bounds local coordinates ({x},{y},{z}). Chunk range is 0-{WorldSettings.ChunkWidth - 1} / 0-{WorldSettings.ChunkHeight - 1}. Returning Empty.");
             return Voxel.Empty;
         }
-        // Access padded array using internal indexer with +1 offset
-        return _voxels[GetVoxelIndex(x, y, z)];
+
+        return _voxels[GetVoxelIndex(x + 1, y, z + 1)];
     }
 
+    /// <summary>
+    /// Gets the voxel at the specified local chunk position.
+    /// </summary>
     public Voxel GetVoxel(Vector3 localPos)
     {
         return GetVoxel(Mathf.FloorToInt(localPos.x), Mathf.FloorToInt(localPos.y), Mathf.FloorToInt(localPos.z));
     }
 
     /// <summary>
-    /// Sets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1).
-    /// Updates the heightmap accordingly using GetSolid/SetSolid. Marks the chunk as dirty on success.
+    /// Sets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1). Updates heightmap. Marks chunk dirty.
     /// </summary>
-    /// <returns>True if the voxel was successfully set, false otherwise.</returns>
+    /// <returns>True if set successfully, false otherwise.</returns>
     public bool SetVoxel(Voxel voxel, int x, int y, int z)
     {
         if (!IsDataGenerated || !_voxels.IsCreated || !_heightMap.IsCreated)
         {
-            Debug.LogWarning($"SetVoxel failed: Data not generated for chunk.");
-            return false; // Data not ready
-        }
-
-        // Validate input coordinates are within chunk bounds (0 to Dim-1)
-        if (x < 0 || x >= WorldSettings.ChunkWidth ||
-            y < 2 || y >= WorldSettings.ChunkHeight ||
-            z < 0 || z >= WorldSettings.ChunkWidth)
-        {
-            Debug.LogError($"SetVoxel called with out-of-bounds local coordinates ({x},{y},{z}). Cannot modify.");
+            Debug.LogWarning($"SetVoxel failed: Data not generated.");
             return false;
         }
 
-        // --- Calculate Indices (using +1 offset for padded array) ---
+        if (x < 0 || x >= WorldSettings.ChunkWidth ||
+            y < 0 || y >= WorldSettings.ChunkHeight ||
+            z < 0 || z >= WorldSettings.ChunkWidth)
+        {
+            Debug.LogWarning($"SetVoxel called with out-of-bounds local coordinates ({x},{y},{z}). Cannot modify.");
+            return false;
+        }
+
         int voxelIndex = GetVoxelIndex(x + 1, y, z + 1);
         int heightMapIndex = GetMapIndex(x + 1, z + 1);
 
-        // --- Optional: Add game logic checks (e.g., bedrock) before modification ---
-        // Voxel existingVoxel = _voxels[voxelIndex];
-        // if (existingVoxel.IsIndestructible) return false;
+        Voxel currentVoxel = _voxels[voxelIndex];
+        HeightMap currentHeight = _heightMap[heightMapIndex];
 
-        // --- Check if value is actually changing (Requires Voxel implementing IEquatable) ---
-        // if (_voxels[voxelIndex] == voxel) return true; // No change needed
+        bool wasSolid = !currentVoxel.IsEmpty;
+        bool placedSolid = !voxel.IsEmpty;
 
-        // --- Apply Voxel Change ---
+        if (wasSolid == placedSolid)
+            return false;
+
+        uint newSolidHeight = currentHeight.GetSolid() + (uint)(placedSolid ? 1 : -1);
+
+        if (newSolidHeight > WorldSettings.ChunkHeight && !placedSolid)
+        {
+            Debug.LogWarning($"Heightmap underflow detected at ({x + 1},{z + 1}). Clamping height to 0.");
+            return false;
+        }
+
         _voxels[voxelIndex] = voxel;
-        bool placedSolid = !voxel.IsEmpty; // Use IsEmpty property from Voxel struct
+        currentHeight.SetSolid((byte)newSolidHeight);
+        _heightMap[heightMapIndex] = currentHeight;
+        IsDirty = true;
 
-        // --- Update Heightmap (Solid Height) ---
-        uint currentSolidHeight = _heightMap[heightMapIndex].GetSolid(); // Get current solid height
-
-        HeightMap newHeight = new();
-        newHeight.SetSolid((uint)(currentSolidHeight + (placedSolid ? 1 : -1)));
-        _heightMap[heightMapIndex] = newHeight;
-        // NOTE: Liquid height updates are not handled here, assuming ModifyVoxel only affects solid blocks directly.
-
-        // --- Mark Dirty ---
-        IsDirty = true; // Mark as dirty on successful modification
         return true;
     }
 
+    /// <summary>
+    /// Sets the voxel at the specified local chunk position. Updates heightmap. Marks chunk dirty.
+    /// </summary>
+    /// <returns>True if set successfully, false otherwise.</returns>
     public bool SetVoxel(Voxel voxel, Vector3 pos)
     {
         return SetVoxel(voxel, Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
     }
 
+    /// <summary>
+    /// Updates the heightmap count at a specific padded coordinate, typically for border adjustments between chunks.
+    /// </summary>
+    /// <returns>True if updated successfully, false otherwise.</returns>
+    public bool UpdateHeightMapBorder(int x, int z, bool isRemoving)
+    {
+        if (!IsDataGenerated || !_heightMap.IsCreated)
+        {
+            Debug.LogWarning($"Height Map border update failed: Data not generated.");
+            return false;
+        }
+
+        if (x < 0 || x >= _paddedWidth || z < 0 || z >= _paddedWidth)
+        {
+            Debug.LogWarning($"UpdateHeightMapBorder called with out-of-bounds padded coordinates ({x},{z}). Cannot modify.");
+            return false;
+        }
+
+        int heightMapIndex = GetMapIndex(x, z);
+        HeightMap currentHeightData = _heightMap[heightMapIndex];
+        uint currentSolidHeight = currentHeightData.GetSolid();
+        uint newSolidHeight = currentSolidHeight + (uint)(isRemoving ? -1 : 1);
+
+        if (newSolidHeight > WorldSettings.ChunkHeight && isRemoving)
+        {
+            newSolidHeight = 0;
+            Debug.LogWarning($"Heightmap underflow detected during border update at ({x},{z}). Clamping height to 0.");
+        }
+
+        HeightMap newHeight = new((byte)newSolidHeight);
+        _heightMap[heightMapIndex] = newHeight;
+
+        IsDirty = true;
+        return true;
+    }
+
+    /// <summary>
+    /// Updates the heightmap count at a specific padded position, typically for border adjustments between chunks.
+    /// </summary>
+    /// <returns>True if updated successfully, false otherwise.</returns>
     public bool UpdateHeightMapBorder(Vector2 pos, bool isRemoving)
     {
         return UpdateHeightMapBorder(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), isRemoving);
     }
 
-    public bool UpdateHeightMapBorder(int x, int z, bool isRemoving)
-    {
-        if (!IsDataGenerated || !_voxels.IsCreated || !_heightMap.IsCreated)
-        {
-            Debug.LogWarning($"Height Map change failed: Data not generated for chunk.");
-            return false; // Data not ready
-        }
-
-        // Validate input coordinates are within chunk bounds (0 to Dim-1)
-        if (x < 0 || x >= WorldSettings.ChunkWidth + 2 ||
-            z < 0 || z >= WorldSettings.ChunkWidth + 2)
-        {
-            Debug.LogError($"Height Map called with out-of-bounds local coordinates ({x},{z}). Cannot modify.");
-            return false;
-        }
-
-        int heightMapIndex = GetMapIndex(x, z);
-
-        // --- Update Heightmap (Solid Height) ---
-        uint currentSolidHeight = _heightMap[heightMapIndex].GetSolid(); // Get current solid height
-        //Debug.LogError($"Current Height: {currentSolidHeight} for map [{x}, {z}]");
-        currentSolidHeight = (isRemoving ? currentSolidHeight - 1 : currentSolidHeight + 1);
-        //Debug.LogError($"New Height: {currentSolidHeight} for map [{x}, {z}]");
-
-        HeightMap newHeight = new();
-        newHeight.SetSolid(currentSolidHeight);
-        _heightMap[heightMapIndex] = newHeight;
-
-        // NOTE: Liquid height updates are not handled here, assuming ModifyVoxel only affects solid blocks directly.
-
-        // --- Mark Dirty ---
-        IsDirty = true; // Mark as dirty on successful modification
-        return true;
-    }
-    private int GetVoxelIndex(int x, int y, int z)
-    {
-        return z + (y * (WorldSettings.ChunkWidth + 2)) + (x * (WorldSettings.ChunkWidth + 2) * WorldSettings.ChunkHeight);
-    }
-
-    private int GetMapIndex(int x, int z)
-    {
-        return z + (x * (WorldSettings.ChunkWidth + 2));
-    }
-
     /// <summary>
-    /// Disposes internal buffers and resets state. Called when chunk is reused or disposed.
+    /// Disposes the NativeArray buffers. Part of the IDisposable pattern.
     /// </summary>
-    public void ClearData()
-    {
-        DisposeBuffers(); // Dispose arrays
-        IsDataGenerated = false;
-        // Keep IsDirty state when clearing (unload != save)
-    }
-
-    /// <summary>
-    /// Disposes the NativeArray buffers if they are created.
-    /// </summary>
-    private void DisposeBuffers()
+    public void Dispose()
     {
         if (_voxels.IsCreated)
         {
             _voxels.Dispose();
-            // Optional: _voxels = default; to clear the struct state
+            _voxels = default;
         }
+
         if (_heightMap.IsCreated)
         {
             _heightMap.Dispose();
-            // Optional: _heightMap = default;
+            _heightMap = default;
         }
-        IsDataGenerated = false; // Ensure flag is reset after disposal
+
+        IsDataGenerated = false;
     }
 
     /// <summary>
-    /// Disposes managed resources (NativeArrays).
+    /// Calculates the 1D index for the voxel array based on padded coordinates. Assumes X-major, then Y, then Z layout.
     /// </summary>
-    public void Dispose()
+    private int GetVoxelIndex(int paddedX, int y, int paddedZ)
     {
-        DisposeBuffers();
+        return paddedZ + (y * _paddedWidth) + (paddedX * _paddedWidth * _height);
+    }
+
+    /// <summary>
+    /// Calculates the 1D index for the heightmap array based on padded coordinates. Assumes X-major, then Z layout.
+    /// </summary>
+    private int GetMapIndex(int paddedX, int paddedZ)
+    {
+        return paddedZ + (paddedX * _paddedWidth);
     }
 }

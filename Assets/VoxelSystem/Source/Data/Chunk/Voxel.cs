@@ -14,16 +14,20 @@ namespace VoxelSystem.Data
     [Serializable]
     public struct Voxel
     {
-        public readonly bool IsEmpty => ID == 0;
+        public readonly bool IsEmpty => _type == 0;
         public static Voxel Empty => new();
 
-        public byte ID;
+        private byte _type;
+        public Voxel(byte type)
+        {
+            _type = type;
+        }
 
         public void SetVoxelType(VoxelType type)
         {
-            ID = (byte)type;
+            _type = (byte)type;
         }
 
-        public readonly VoxelType GetVoxelType() => (VoxelType)(ID);
+        public readonly VoxelType GetVoxelType() => (VoxelType)(_type);
     }; 
 }

@@ -1,109 +1,67 @@
-using System; // Provides Action event type
-using UnityEngine; // Provides MonoBehaviour, Camera, GameObject, etc.
-using UnityEngine.EventSystems; // Provides EventSystem for UI interaction checks
-using VoxelSystem.Data; // Provides Voxel struct/class (assumption)
-using VoxelSystem.Data.Blocks; // Provides BlocksCatalogue, VoxelType (assumption)
-using VoxelSystem.Managers; // Provides IChunksManager
-using Zenject; // Provides dependency injection ([Inject])
+using System;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using VoxelSystem.Data;
+using VoxelSystem.Data.Blocks;
+using VoxelSystem.Managers;
+using Zenject;
 
-/// <summary>
-/// Manages placing and removing voxel blocks in the world based on player input.
-/// Handles raycasting, preview display, state changes, and interaction with the ChunksManager.
-/// </summary>
 public class VoxelBlockManager : MonoBehaviour
 {
-    #region Dependencies and Configuration
-
-    [Header("Dependencies")]
-    [Tooltip("Reference to the main camera used for raycasting.")]
-    [SerializeField] private Camera mainCamera; // Made private serialized field, assign in Inspector
-
-    [Tooltip("Prefab used for the placement/removal preview.")]
-    [SerializeField] private GameObject blockPrefab; // Made private serialized field
-
-    [Tooltip("Layer mask containing the voxel terrain geometry for raycasting.")]
-    [SerializeField] private LayerMask terrainLayer; // Made private serialized field
-
-    // Injected dependencies
-    [Inject] private readonly BlocksCatalogue _blocksCatalogue;
-    [Inject] private readonly IChunksManager _chunksManager;
-
-    #endregion
-
-    #region Public Events
-
     /// <summary>
-    /// Event invoked when the selected block type changes (including selecting removal or idle).
-    /// </summary>
-    public event Action OnSelected;
-
-    #endregion
-
-    #region Private State
-
-    /// <summary>
-    /// Represents the current action the manager is set up to perform.
+    /// Defines the possible states for the voxel placement/removal operations.
     /// </summary>
     private enum PlacementState
     {
-        None,    // Not actively placing or removing
-        Placing, // Ready to place the selected block type
-        Removing // Ready to remove a block
+        None,
+        Placing,
+        Removing
     }
 
-    /// <summary>
-    /// The current state of the placement manager.
-    /// </summary>
+    [SerializeField] private Camera _mainCamera;
+    [SerializeField] private GameObject _blockPrefab;
+    [SerializeField] private LayerMask _terrainLayer;
+    [SerializeField] private Vector3 _previewColliderSize = Vector3.one;
+
+    [Inject] private readonly BlocksCatalogue _blocksCatalogue;
+    [Inject] private readonly IChunksManager _chunksManager;
+
     private PlacementState _currentState = PlacementState.None;
-
-    /// <summary>
-    /// The type of voxel currently selected for placement. Ignored when removing.
-    /// </summary>
-    private VoxelType _blockType; // Assuming VoxelType is an enum or similar identifier
-
-    /// <summary>
-    /// Instantiated preview object shown at the target location.
-    /// </summary>
+    private VoxelType _blockType;
     private GameObject _previewObject;
-
-    /// <summary>
-    /// Renderer component of the preview object, cached for efficiency.
-    /// </summary>
     private MeshRenderer _previewRenderer;
-
-    // Cached shader property IDs for performance
     private int _placingShaderID;
     private int _removingShaderID;
     private int _renderBlockShaderID;
     private int _blockIndexShaderID;
-
-    #endregion
-
-    #region Unity Lifecycle Methods
+    private int _blockedShaderID;
+    private bool _isBlocked;
 
     /// <summary>
-    /// Called when the script instance is being loaded.
-    /// Initializes the preview object and caches shader property IDs.
+    /// Invoked when the selected block or placement state changes, primarily used by UI elements.
+    /// </summary>
+    public event Action Selected;
+
+    /// <summary>
+    /// Initializes references, instantiates the preview object, and caches shader property IDs.
+    /// Disables the component if essential references are missing.
     /// </summary>
     private void Awake()
     {
-        // Validate essential references assigned in the Inspector
-        if (mainCamera == null)
+        if (_mainCamera == null)
         {
             Debug.LogError("VoxelBlockManager: Main Camera reference not set!", this);
-            enabled = false; // Disable script if camera is missing
+            enabled = false;
             return;
         }
-        if (blockPrefab == null)
+        if (_blockPrefab == null)
         {
             Debug.LogError("VoxelBlockManager: Block Prefab reference not set!", this);
-            // Preview functionality will be disabled, but core logic might still work if needed.
         }
-        else if (_previewObject == null) // Instantiate preview object if prefab is set and not already instantiated
+        else if (_previewObject == null)
         {
-            _previewObject = Instantiate(blockPrefab);
-            _previewObject.SetActive(false); // Start hidden
-            // Cache the renderer component
+            _previewObject = Instantiate(_blockPrefab);
+            _previewObject.SetActive(false);
             _previewObject.TryGetComponent<MeshRenderer>(out _previewRenderer);
             if (_previewRenderer == null)
             {
@@ -111,55 +69,44 @@ public class VoxelBlockManager : MonoBehaviour
             }
         }
 
-        // Cache shader property IDs to avoid string lookups every frame/state change
         _placingShaderID = Shader.PropertyToID("_Placing");
         _removingShaderID = Shader.PropertyToID("_Removing");
         _renderBlockShaderID = Shader.PropertyToID("_Render_Block");
         _blockIndexShaderID = Shader.PropertyToID("_Block_Index");
+        _blockedShaderID = Shader.PropertyToID("_Blocked");
 
-        // Ensure initial state is idle
         SetIdleState();
     }
 
     /// <summary>
-    /// Called every frame.
-    /// Handles raycasting, preview updates, and input detection for placing/removing blocks.
+    /// Handles player input for placing or removing blocks each frame.
+    /// Performs raycasting, updates the preview position and state, and triggers block modification.
     /// </summary>
     private void Update()
     {
-        // Hide preview by default each frame; ShowPreview will activate it if needed.
         HidePreview();
 
-        // Ignore if idle, or if the mouse pointer is over a UI element.
         if (_currentState == PlacementState.None || EventSystem.current.IsPointerOverGameObject())
         {
             return;
         }
 
-        // Cast a ray from the camera through the mouse position.
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
 
-        // Perform the raycast against the specified terrain layer.
-        // Also includes an original check `hit.normal.y < 1.0f` which might prevent placement on sheer vertical faces or overhangs?
-        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer) || hit.normal.y < 1.0f)
+        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _terrainLayer) || hit.normal.y < 1.0f)
         {
-            // No valid hit point found, exit.
             return;
         }
 
-        // Calculate the target voxel position based on the hit point.
         Vector3 targetPosition = GetSnappedPosition(hit.point, hit.normal);
+        _isBlocked = CheckForCollisions(targetPosition + new Vector3(0.5f, 0.5f, 0.5f));
+        ShowPreview(targetPosition, _isBlocked);
 
-        // Show the preview object at the calculated position.
-        ShowPreview(targetPosition);
-
-        // Check for the primary mouse button click to perform the action.
-        if (!Input.GetMouseButtonDown(0)) // Button 0 is typically the left mouse button
+        if (_isBlocked || !Input.GetMouseButtonDown(0))
         {
-            return; // No click detected this frame.
+            return;
         }
 
-        // Perform placing or removing based on the current state.
         if (_currentState == PlacementState.Placing)
         {
             PlaceBlock(targetPosition);
@@ -171,139 +118,107 @@ public class VoxelBlockManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called when the GameObject is being destroyed.
-    /// Cleans up the instantiated preview object.
+    /// Cleans up the instantiated preview object when the manager is destroyed.
     /// </summary>
     private void OnDestroy()
     {
-        // Destroy the preview object if it exists to prevent memory leaks.
         if (_previewObject != null)
         {
             Destroy(_previewObject);
-            _previewObject = null; // Clear reference
+            _previewObject = null;
             _previewRenderer = null;
         }
     }
 
-    #endregion
-
-    #region Public State Control Methods
-
     /// <summary>
-    /// Sets the manager state to 'Placing' using the provided block information.
-    /// Updates the preview material.
+    /// Sets the manager state to 'Placing' for the specified block type.
+    /// Updates the preview material and notifies listeners via the Selected event.
     /// </summary>
     /// <param name="block">The BlockSelector providing the VoxelType to place.</param>
-    public void SetPlacingState(BlockSelector block) // Assuming BlockSelector has a VoxelType property named 'Type'
+    public void SetPlacingState(BlockSelector block)
     {
         if (block == null) return;
 
         _blockType = block.Type;
-        OnSelected?.Invoke(); // Notify listeners (e.g., UI)
-        block.SetSelectedState(); // Update the visual state of the selector
+        Selected?.Invoke();
+        block.SetSelectedState();
 
-        // If the selected type is 'air' or equivalent, switch to removing state.
-        if (_blockType == VoxelType.air) // Replace VoxelType.air with your actual representation of air/empty
+        if (_blockType == VoxelType.air)
         {
             SetRemovingState();
             return;
         }
 
-        // Set the state to Placing.
         _currentState = PlacementState.Placing;
-
-        // Update preview material for placing state.
         UpdatePreviewMaterial();
     }
 
     /// <summary>
     /// Sets the manager state to 'Removing'.
-    /// Updates the preview material.
+    /// Updates the preview material to indicate removal mode.
     /// </summary>
     public void SetRemovingState()
     {
         _currentState = PlacementState.Removing;
-        _blockType = VoxelType.air; // Ensure block type reflects removal intention
-
-        // Update preview material for removing state.
+        _blockType = VoxelType.air;
         UpdatePreviewMaterial();
     }
 
     /// <summary>
     /// Sets the manager state to 'None' (idle).
-    /// Hides the preview and resets the preview material.
+    /// Hides the placement preview and notifies listeners via the Selected event.
     /// </summary>
     public void SetIdleState()
     {
         _currentState = PlacementState.None;
-        _blockType = VoxelType.air; // Reset selected type
-        OnSelected?.Invoke(); // Notify listeners
-
-        // Update preview material for idle state.
+        _blockType = VoxelType.air;
+        Selected?.Invoke();
         UpdatePreviewMaterial();
-        HidePreview(); // Ensure preview is hidden when idle
+        HidePreview();
     }
 
-    #endregion
-
-    #region Core Logic Methods (Placing/Removing/Snapping)
-
     /// <summary>
-    /// Calculates the integer grid position for the target voxel based on raycast hit.
-    /// Adjusts position based on hit point and normal for placing/removing.
+    /// Calculates the target integer voxel grid position based on the raycast hit point and normal.
+    /// The position is offset based on whether placing or removing.
     /// </summary>
-    /// <param name="hitPos">The precise point where the raycast hit the terrain.</param>
+    /// <param name="hitPos">The precise world position of the raycast hit.</param>
     /// <param name="hitNormal">The normal vector of the surface hit by the raycast.</param>
-    /// <returns>The calculated integer coordinates of the target voxel.</returns>
+    /// <returns>The calculated integer grid position (snapped) for the voxel modification.</returns>
     private Vector3 GetSnappedPosition(Vector3 hitPos, Vector3 hitNormal)
     {
         Vector3 targetPos;
 
         if (_currentState == PlacementState.Placing)
         {
-            // For placing, offset slightly *away* from the surface normal before flooring.
-            // This typically places the block adjacent to the hit surface.
             targetPos = hitPos + hitNormal * 0.5f;
         }
-        else // Removing
+        else
         {
-            // For removing, offset slightly *into* the surface normal before flooring.
-            // This targets the block that was hit.
             targetPos = hitPos - hitNormal * 0.5f;
-            // Original logic also included: hitPos += Vector3.down * .5f; - Keep if needed, but normal-based offset is more common.
-            // Let's use the normal-based offset for consistency unless the Vector3.down logic was critical.
         }
 
-        // Floor the coordinates to get the integer grid position of the voxel.
-        // Add a small epsilon to Y when flooring to handle floating point inaccuracies near integer boundaries.
         Vector3 snapped = new Vector3(
             Mathf.FloorToInt(targetPos.x),
             Mathf.FloorToInt(targetPos.y + 0.001f),
             Mathf.FloorToInt(targetPos.z)
         );
 
-        // Debug.LogWarning($"[VoxelBlockManager] Hit: {hitPos:F3}, Normal: {hitNormal:F3}, Target: {targetPos:F3}, Snapped: {snapped}");
-
         return snapped;
     }
 
     /// <summary>
-    /// Attempts to place the currently selected block at the target position using the ChunksManager.
+    /// Attempts to place a block of the currently selected type at the specified grid position.
+    /// Does nothing if not in the 'Placing' state, the selected type is 'air', or the position is blocked.
     /// </summary>
-    /// <param name="position">The integer world coordinates where the block should be placed.</param>
+    /// <param name="position">The integer grid position where the block should be placed.</param>
     private void PlaceBlock(Vector3 position)
     {
-        // Ensure we are actually in placing state and have a valid block type selected.
-        if (_currentState != PlacementState.Placing || _blockType == VoxelType.air) // Replace VoxelType.air check if needed
+        if (_currentState != PlacementState.Placing || _blockType == VoxelType.air || _isBlocked)
         {
             return;
         }
 
-        // Create the Voxel data structure for the selected block type.
-        // ** Adapt this line based on your actual Voxel struct/class definition **
-        Voxel voxelToPlace = new Voxel { ID = (byte)_blockType }; // Example assumption
-
-        // Call the ChunksManager API to modify the voxel.
+        Voxel voxelToPlace = new((byte)_blockType);
         bool success = _chunksManager.ModifyVoxel(position, voxelToPlace);
 
         if (success)
@@ -319,23 +234,18 @@ public class VoxelBlockManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Attempts to remove the block at the target position using the ChunksManager.
+    /// Attempts to remove a block (place 'air') at the specified grid position.
+    /// Does nothing if not in the 'Removing' state.
     /// </summary>
-    /// <param name="position">The integer world coordinates where the block should be removed.</param>
+    /// <param name="position">The integer grid position where the block should be removed.</param>
     private void RemoveBlock(Vector3 position)
     {
-        // Ensure we are actually in removing state.
         if (_currentState != PlacementState.Removing)
         {
             return;
         }
 
-        // Get the representation for an empty voxel.
-        // ** Adapt this line based on your actual Voxel struct/class definition **
-        Voxel emptyVoxel = Voxel.Empty; // Example assumption (assuming a static Voxel.Empty exists)
-        // Or: Voxel emptyVoxel = new Voxel { ID = 0 };
-
-        // Call the ChunksManager API to modify the voxel (setting it to empty).
+        Voxel emptyVoxel = Voxel.Empty;
         bool success = _chunksManager.ModifyVoxel(position, emptyVoxel);
 
         if (success)
@@ -350,77 +260,83 @@ public class VoxelBlockManager : MonoBehaviour
         }
     }
 
-    #endregion
-
-    #region Preview Object Handling
-
     /// <summary>
-    /// Shows the preview object at the specified position.
+    /// Activates and positions the preview object at the target location.
+    /// Updates the preview material to indicate if the placement is currently blocked.
     /// </summary>
-    /// <param name="position">The world position to place the preview object.</param>
-    private void ShowPreview(Vector3 position)
+    /// <param name="position">The world position where the preview should be displayed.</param>
+    /// <param name="isBlocked">Whether the target placement position is currently obstructed.</param>
+    private void ShowPreview(Vector3 position, bool isBlocked)
     {
-        if (_previewObject == null) return;
+        if (_previewObject == null || _previewRenderer == null) return;
+
+        Material previewMat = _previewRenderer.sharedMaterial;
+        if (previewMat != null)
+        {
+            previewMat.SetFloat(_blockedShaderID, isBlocked ? 1f : 0f);
+        }
 
         _previewObject.transform.position = position;
         _previewObject.SetActive(true);
     }
 
     /// <summary>
-    /// Hides the preview object.
+    /// Deactivates the preview object, hiding it from view.
     /// </summary>
     private void HidePreview()
     {
         if (_previewObject == null) return;
-
         _previewObject.SetActive(false);
     }
 
     /// <summary>
-    /// Updates the material properties of the preview object based on the current state (_currentState, _blockType).
-    /// Uses cached shader property IDs for efficiency.
+    /// Updates the shader properties of the preview object's material based on the current placement state (None, Placing, Removing) and block type.
     /// </summary>
     private void UpdatePreviewMaterial()
     {
-        // Ensure preview object and renderer exist.
         if (_previewRenderer == null || _previewRenderer.sharedMaterial == null) return;
 
-        Material previewMat = _previewRenderer.sharedMaterial; // Use sharedMaterial if the preview doesn't need unique material instances
+        Material previewMat = _previewRenderer.sharedMaterial;
 
-        // Reset all state flags initially
         previewMat.SetFloat(_placingShaderID, 0f);
         previewMat.SetFloat(_removingShaderID, 0f);
         previewMat.SetFloat(_renderBlockShaderID, 0f);
-        previewMat.SetFloat(_blockIndexShaderID, 0f); // Default to 0 or an invalid index
+        previewMat.SetFloat(_blockIndexShaderID, 0f);
+        previewMat.SetFloat(_blockedShaderID, 0f);
 
-        // Apply state-specific flags
         switch (_currentState)
         {
             case PlacementState.Placing:
                 previewMat.SetFloat(_placingShaderID, 1f);
-                // Try to get the texture index for the selected block type
                 if (_blocksCatalogue != null && _blocksCatalogue.TextureMapping.TryGetValue((int)_blockType, out var index))
                 {
-                    previewMat.SetFloat(_renderBlockShaderID, 1f); // Enable texture rendering
-                    previewMat.SetFloat(_blockIndexShaderID, index); // Set texture index
+                    previewMat.SetFloat(_renderBlockShaderID, 1f);
+                    previewMat.SetFloat(_blockIndexShaderID, index);
                 }
-                else
+                else if (_blockType != VoxelType.air)
                 {
-                    // Optionally handle cases where the block type has no texture mapping
                     Debug.LogWarning($"No texture mapping found in BlocksCatalogue for VoxelType: {_blockType}");
                 }
+                previewMat.SetFloat(_blockedShaderID, _isBlocked ? 1f : 0f);
                 break;
 
             case PlacementState.Removing:
                 previewMat.SetFloat(_removingShaderID, 1f);
-                // No specific block texture needed for removal preview
                 break;
 
             case PlacementState.None:
-                // All flags already reset, do nothing further
                 break;
         }
     }
 
-    #endregion
+    /// <summary>
+    /// Checks for any colliders overlapping the potential placement area using Physics.CheckBox.
+    /// Ignores colliders on the terrain layer itself.
+    /// </summary>
+    /// <param name="centerPosition">The center point of the box check (typically the center of the target voxel).</param>
+    /// <returns>True if any colliders (excluding terrain) are found within the box, false otherwise.</returns>
+    private bool CheckForCollisions(Vector3 centerPosition)
+    {
+        return Physics.CheckBox(centerPosition, _previewColliderSize / 2, Quaternion.identity, ~_terrainLayer);
+    }
 }

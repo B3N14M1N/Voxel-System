@@ -25,6 +25,7 @@ namespace VoxelSystem.Managers
         private readonly Queue<Chunk> _chunksToClear = new();
         private readonly Transform _parent;
 
+        [SerializeField] private LayerMask _chunkLayer;
         private Dictionary<Vector3, Chunk> _active = new();
         private Dictionary<Vector3, Chunk> _cached = new();
         private Dictionary<Vector3, Chunk> _generating = new();
@@ -33,11 +34,11 @@ namespace VoxelSystem.Managers
         {
             get
             {
-                Chunk chunk = new(Vector3.zero, this)
+                Chunk chunk = new(Vector3.zero, this, _chunkLayer, _parent)
                 {
-                    Parent = _parent,
                     Active = false
                 };
+                
                 return chunk;
             }
         }
@@ -46,10 +47,10 @@ namespace VoxelSystem.Managers
         /// 
         /// </summary>
         /// <param name="transform"></param>
-        public ChunksManager(Transform transform = null)
+        public ChunksManager(LayerMask layerMask = default, Transform transform = null)
         {
             _parent = transform;
-
+            _chunkLayer = layerMask;
             for (int i = 0; i < (PlayerSettings.RenderDistance + PlayerSettings.CacheDistance) * (PlayerSettings.RenderDistance + PlayerSettings.CacheDistance); i++)
             {
                 _pool.Enqueue(NewChunk);

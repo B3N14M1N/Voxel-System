@@ -24,7 +24,7 @@ public class BlockSelector : MonoBehaviour
 
         Button.onClick.AddListener(OnSelected);
 
-        _voxelManager.OnSelected += SetUnSelectedState;
+        _voxelManager.Selected += SetUnSelectedState;
 
         if (Backgroud == null) return;
 
@@ -69,7 +69,7 @@ public class BlockSelector : MonoBehaviour
     private void OnDestroy()
     {
         if (_voxelManager != null)
-            _voxelManager.OnSelected -= SetUnSelectedState;
+            _voxelManager.Selected -= SetUnSelectedState;
 
         if (Button != null)
             Button.onClick.RemoveListener(OnSelected);

@@ -1,6 +1,5 @@
 /* ChunkDataJob.cs */
 using Unity.Burst;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -313,22 +312,16 @@ namespace VoxelSystem.Generators
 
                 // --- Set HeightMap ---
                 // Store the final calculated terrain height (solid ground level)
-                HeightMap heightMap = new() { data = 0 }; // Initialize
-                heightMap.SetSolid((uint)terrainHeight);
-                // TODO: Add liquid height calculation if needed (e.g., based on seaLevel)
-                // if (terrainHeight < seaLevel) {
-                //    heightMap.SetLiquidTop((uint)seaLevel);
-                //    heightMap.SetLiquidBottom((uint)terrainHeight); // Liquid fills space above terrain up to sea level
-                // }
+                HeightMap heightMap = new((byte)terrainHeight); // Initialize
                 heightMaps[index] = heightMap;
 
 
                 // --- Voxel Placement ---
                 // Define base voxel types (cache them)
-                Voxel grass = new() { ID = (byte)VoxelType.grass };
-                Voxel dirt = new() { ID = (byte)VoxelType.dirt };
-                Voxel stone = new() { ID = (byte)VoxelType.stone };
-                Voxel sand = new() { ID = (byte)VoxelType.sand };
+                Voxel grass = new((byte)VoxelType.grass);
+                Voxel dirt = new((byte)VoxelType.dirt);
+                Voxel stone = new((byte)VoxelType.stone);
+                Voxel sand = new((byte)VoxelType.sand);
 
                 //Voxel water = CreateVoxel(VoxelType.water, VoxelPhysicsType.liquid); // Assuming water exists
                 Voxel air = Voxel.Empty; // Air

@@ -1,8 +1,6 @@
 /* GenerationParameters.cs */
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using VoxelSystem.Data; // Assuming VoxelType enum is here
 
 namespace VoxelSystem.Settings.Generation
 {
