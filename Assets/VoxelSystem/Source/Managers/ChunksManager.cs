@@ -9,7 +9,6 @@ using UnityEngine;
 using VoxelSystem.Data;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
-using static UnityEditor.PlayerSettings;
 
 namespace VoxelSystem.Managers
 {

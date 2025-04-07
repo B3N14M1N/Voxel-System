@@ -19,6 +19,7 @@ public class ChunkJob
     private readonly IChunksManager _chunksManager;
 
     public static int Processed { get; private set; }
+    private bool _regenerating = false;
     public GenerationData GenerationData { get; private set; }
     private bool Completed = false;
 
@@ -56,10 +57,12 @@ public class ChunkJob
             chunk = _chunksManager?.GetChunk(GenerationData.position);
             if (chunk != null)
             {
+
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
                 {
                     chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref chunk.HeightMap, _chunksManager);
                     ColliderScheduled = true;
+                    _regenerating = true;
                     Completed = false;
                 }
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
@@ -67,6 +70,7 @@ public class ChunkJob
                     //chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap);
                     chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref chunk.Voxels, ref chunk.HeightMap, _chunksManager);
                     MeshScheduled = true;
+                    _regenerating = true;
                     Completed = false;
                 }
             }
@@ -128,7 +132,8 @@ public class ChunkJob
                 _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
                 Completed = true;
                 Dispose();
-                Processed -= 1;
+                if (_regenerating == false)
+                    Processed -= 1;
             }
             chunkColliderGenerator = null;
             return Completed;
@@ -145,7 +150,8 @@ public class ChunkJob
                 _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
                 Completed = true;
                 Dispose();
-                Processed -= 1;
+                if (_regenerating == false)
+                    Processed -= 1;
             }
             //chunkMeshGenerator = null;
             chunkParallelMeshGenerator = null;
