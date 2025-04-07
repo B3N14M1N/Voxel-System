@@ -1930,12 +1930,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9568ffee8e915bc4187a6e31cbbfdf4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainCamera: {fileID: 330585545}
-  blockPrefab: {fileID: 388521249733482144, guid: ca80a6db6bcf59a43b5954850319f6d9, type: 3}
-  terrainLayer:
+  _mainCamera: {fileID: 330585545}
+  _blockPrefab: {fileID: 388521249733482144, guid: ca80a6db6bcf59a43b5954850319f6d9, type: 3}
+  _terrainLayer:
     serializedVersion: 2
     m_Bits: 64
-  previewColliderSize: {x: 1, y: 1, z: 1}
+  _previewColliderSize: {x: 1, y: 1, z: 1}
 --- !u!1 &688594022
 GameObject:
   m_ObjectHideFlags: 0

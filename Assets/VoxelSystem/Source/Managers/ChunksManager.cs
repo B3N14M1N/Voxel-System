@@ -217,7 +217,7 @@ namespace VoxelSystem.Managers
                 _generating.Remove(pos);
             }
         }
-        // --- Voxel Modification API ---
+
         /// <summary>
         /// Modifies a single voxel at the specified world position.
         /// Uses WorldSettings.ChunkPositionFromPosition to find the chunk key.
@@ -328,8 +328,6 @@ namespace VoxelSystem.Managers
 
             return new Vector3Int(localX, localY, localZ);
         }
-
-        // --- Validation Helper (Example) ---
 
         /// <summary>
         /// Placeholder for validating a voxel type.

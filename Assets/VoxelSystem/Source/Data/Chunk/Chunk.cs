@@ -9,8 +9,6 @@ public class Chunk : IDisposable
 {
     private readonly ChunkDataHandler _dataHandler;
     private readonly ChunkViewHandler _viewHandler;
-    private readonly IChunksManager _chunksManager; // Keep reference if needed by handlers or logic here
-    #region Properties (Delegated or Direct)
 
     public Vector3 Position { get; private set; }
 
@@ -50,15 +48,10 @@ public class Chunk : IDisposable
     public Voxel this[Vector3 pos] => _dataHandler.GetVoxel(pos);
     public Voxel this[int x, int y, int z] => _dataHandler.GetVoxel(x, y, z);
 
-    #endregion
-
-    #region Constructor and Setup
-
     // Constructor now requires the manager
     public Chunk(Vector3 position, IChunksManager chunksManager, LayerMask layerMask = default, Transform defaultParent = null)
     {
         Position = position;
-        _chunksManager = chunksManager;
         _dataHandler = new ChunkDataHandler();
         _viewHandler = new ChunkViewHandler(chunksManager); // Pass manager for callbacks
 
@@ -79,10 +72,6 @@ public class Chunk : IDisposable
         // Do NOT reset IsDirty here - let manager decide if loading overwrites dirty state
     }
 
-    #endregion
-
-    #region Voxel Modification (Delegated)
-
     // Keep SetVoxel on Chunk as the public API, delegate to handler
     public bool SetVoxel(Voxel voxel, Vector3 pos)
     {
@@ -95,7 +84,6 @@ public class Chunk : IDisposable
         if (success)
         {
             //Debug.Log($"Voxel set at {pos}, chunk marked Dirty.");
-            Dirty = true;
         }
 
         else Debug.Log($"Failed to set voxel at {pos}.");
@@ -104,7 +92,7 @@ public class Chunk : IDisposable
 
     public bool SetVoxel(Voxel voxel, int x, int y, int z)
     {
-        return SetVoxel(voxel, new Vector3(x, y, z)); // Convert and call the other overload
+        return SetVoxel(voxel, new Vector3(x, y, z));
     }
 
     public bool UpdateHeightMapBorder(int x, int z, bool isRemoving)
@@ -116,9 +104,6 @@ public class Chunk : IDisposable
     {
         return _dataHandler.UpdateHeightMapBorder(pos, isRemoving);
     }
-    #endregion
-
-    #region Mesh & Data Upload (Delegated)
 
     // Called by ChunkJob/Generators after completion
     public void UploadData(ref NativeArray<Voxel> voxels, ref NativeArray<HeightMap> heightMap)
@@ -145,10 +130,6 @@ public class Chunk : IDisposable
         _viewHandler.ApplyMaterial(material);
     }
 
-    #endregion
-
-    #region Clear & Disposing (Orchestrated)
-
     // Called by ChunksManager when reusing/pooling
     public void ClearChunk()
     {
@@ -169,6 +150,4 @@ public class Chunk : IDisposable
         //Null references to help GC (optional)
         //_chunksManager = null;
     }
-
-    #endregion
 }

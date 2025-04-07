@@ -99,7 +99,7 @@ public class ChunkViewHandler : IDisposable
     /// <param name="position">The logical chunk coordinate (e.g., (0,0), (1,0)).</param>
     public void UpdateInstanceTransform(Vector3 position)
     {
-        if (_chunkInstance == null) return;
+        if (!IsInstantiated) return;
         _chunkInstance.name = $"Chunk Instance [{(int)position.x}]:[{(int)position.z}]";
         _chunkInstance.transform.position = new Vector3(position.x, 0, position.z) * WorldSettings.ChunkWidth;
     }
@@ -189,7 +189,7 @@ public class ChunkViewHandler : IDisposable
     /// </summary>
     public void PrepareForPooling()
     {
-        if (_chunkInstance != null)
+        if (IsInstantiated)
         {
             _chunkInstance.name = "Chunk Instance [_pool]";
             IsActive = false;
@@ -204,7 +204,7 @@ public class ChunkViewHandler : IDisposable
     public void Dispose()
     {
         ClearMeshAndCollider();
-        if (_chunkInstance != null)
+        if (IsInstantiated)
         {
             GameObject.Destroy(_chunkInstance);
             _chunkInstance = null;
@@ -239,7 +239,7 @@ public class ChunkViewHandler : IDisposable
     /// <returns>True if the MeshFilter component is available, false otherwise.</returns>
     private bool EnsureMeshFilter()
     {
-        if (_chunkInstance == null) return false;
+        if (!IsInstantiated) return false;
         if (_meshFilter == null) _chunkInstance.TryGetComponent(out _meshFilter);
         return _meshFilter != null;
     }
@@ -250,7 +250,7 @@ public class ChunkViewHandler : IDisposable
     /// <returns>True if the MeshRenderer component is available, false otherwise.</returns>
     private bool EnsureRenderer()
     {
-        if (_chunkInstance == null) return false;
+        if (!IsInstantiated) return false;
         if (_meshRenderer == null) _chunkInstance.TryGetComponent(out _meshRenderer);
         return _meshRenderer != null;
     }
@@ -261,7 +261,7 @@ public class ChunkViewHandler : IDisposable
     /// <returns>True if the MeshCollider component is available, false otherwise.</returns>
     private bool EnsureCollider()
     {
-        if (_chunkInstance == null) return false;
+        if (!IsInstantiated) return false;
         if (_meshCollider == null) _chunkInstance.TryGetComponent(out _meshCollider);
         return _meshCollider != null;
     }
