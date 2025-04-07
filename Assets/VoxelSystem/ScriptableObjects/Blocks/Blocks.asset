@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acafe5c5fe607f54aaddfa3e7b452d1a, type: 3}
+  m_Name: Blocks
+  m_EditorClassIdentifier: 
+  <Materials>k__BackingField:
+  - {fileID: 2100000, guid: 803be1c311d0fc548ba75b7dd47ada71, type: 2}
+  - {fileID: 2100000, guid: 48b37ae3dd5756441a1f266168479eaa, type: 2}
+  <Blocks>k__BackingField:
+  - <VoxelType>k__BackingField: 0
+    <TopTexture>k__BackingField: {fileID: 0}
+    <SideTexture>k__BackingField: {fileID: 0}
+  - <VoxelType>k__BackingField: 1
+    <TopTexture>k__BackingField: {fileID: 2800000, guid: 2f3b1126cd965dd43a2f9e4b5c968186, type: 3}
+    <SideTexture>k__BackingField: {fileID: 2800000, guid: 7824927082afb2e4cb8fc1d90c18cdb3, type: 3}
+  - <VoxelType>k__BackingField: 2
+    <TopTexture>k__BackingField: {fileID: 2800000, guid: 68a74c267e5db3d46a86f8fbf3ca5db4, type: 3}
+    <SideTexture>k__BackingField: {fileID: 2800000, guid: 68a74c267e5db3d46a86f8fbf3ca5db4, type: 3}
+  - <VoxelType>k__BackingField: 3
+    <TopTexture>k__BackingField: {fileID: 2800000, guid: 9102a5f66a789a945ba0df616caa53fa, type: 3}
+    <SideTexture>k__BackingField: {fileID: 2800000, guid: 9102a5f66a789a945ba0df616caa53fa, type: 3}
+  - <VoxelType>k__BackingField: 4
+    <TopTexture>k__BackingField: {fileID: 2800000, guid: c94828f88b909b744997238cb95da18e, type: 3}
+    <SideTexture>k__BackingField: {fileID: 2800000, guid: c94828f88b909b744997238cb95da18e, type: 3}
