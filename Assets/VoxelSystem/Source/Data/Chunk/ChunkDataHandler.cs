@@ -3,6 +3,9 @@ using Unity.Collections;
 using UnityEngine;
 using VoxelSystem.Data;
 
+/// <summary>
+/// Manages the voxel and height map data for a chunk, handling operations to access and modify the data.
+/// </summary>
 public class ChunkDataHandler : IDisposable
 {
     private static int _paddedWidth = WorldSettings.ChunkWidth + 2;
@@ -32,6 +35,9 @@ public class ChunkDataHandler : IDisposable
     /// </summary>
     public ref NativeArray<HeightMap> HeightMapRef => ref _heightMap;
 
+    /// <summary>
+    /// Creates a new instance of the ChunkDataHandler.
+    /// </summary>
     public ChunkDataHandler()
     {
         IsDataGenerated = false;
@@ -43,6 +49,8 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Takes ownership of generated data arrays, validating sizes. Disposes previous data.
     /// </summary>
+    /// <param name="newVoxels">The new voxel data to use</param>
+    /// <param name="newHeightMap">The new height map data to use</param>
     public void UploadData(ref NativeArray<Voxel> newVoxels, ref NativeArray<HeightMap> newHeightMap)
     {
         Dispose();
@@ -83,6 +91,10 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Gets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1).
     /// </summary>
+    /// <param name="x">The x coordinate within the chunk</param>
+    /// <param name="y">The y coordinate within the chunk</param>
+    /// <param name="z">The z coordinate within the chunk</param>
+    /// <returns>The voxel at the specified coordinates, or an empty voxel if out of range</returns>
     public Voxel GetVoxel(int x, int y, int z)
     {
         if (!IsDataGenerated || !_voxels.IsCreated) return Voxel.Empty;
@@ -101,6 +113,8 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Gets the voxel at the specified local chunk position.
     /// </summary>
+    /// <param name="localPos">The position within the chunk</param>
+    /// <returns>The voxel at the specified position</returns>
     public Voxel GetVoxel(Vector3 localPos)
     {
         return GetVoxel(Mathf.FloorToInt(localPos.x), Mathf.FloorToInt(localPos.y), Mathf.FloorToInt(localPos.z));
@@ -109,6 +123,10 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Sets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1). Updates heightmap. Marks chunk dirty.
     /// </summary>
+    /// <param name="voxel">The voxel to set</param>
+    /// <param name="x">The x coordinate within the chunk</param>
+    /// <param name="y">The y coordinate within the chunk</param>
+    /// <param name="z">The z coordinate within the chunk</param>
     /// <returns>True if set successfully, false otherwise.</returns>
     public bool SetVoxel(Voxel voxel, int x, int y, int z)
     {
@@ -157,6 +175,8 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Sets the voxel at the specified local chunk position. Updates heightmap. Marks chunk dirty.
     /// </summary>
+    /// <param name="voxel">The voxel to set</param>
+    /// <param name="pos">The position within the chunk</param>
     /// <returns>True if set successfully, false otherwise.</returns>
     public bool SetVoxel(Voxel voxel, Vector3 pos)
     {
@@ -166,6 +186,9 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Updates the heightmap count at a specific padded coordinate, typically for border adjustments between chunks.
     /// </summary>
+    /// <param name="x">The x coordinate in the padded grid</param>
+    /// <param name="z">The z coordinate in the padded grid</param>
+    /// <param name="isRemoving">Whether a voxel is being removed (true) or added (false)</param>
     /// <returns>True if updated successfully, false otherwise.</returns>
     public bool UpdateHeightMapBorder(int x, int z, bool isRemoving)
     {
@@ -202,6 +225,8 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Updates the heightmap count at a specific padded position, typically for border adjustments between chunks.
     /// </summary>
+    /// <param name="pos">The position in the padded grid</param>
+    /// <param name="isRemoving">Whether a voxel is being removed (true) or added (false)</param>
     /// <returns>True if updated successfully, false otherwise.</returns>
     public bool UpdateHeightMapBorder(Vector2 pos, bool isRemoving)
     {
@@ -231,6 +256,10 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Calculates the 1D index for the voxel array based on padded coordinates. Assumes X-major, then Y, then Z layout.
     /// </summary>
+    /// <param name="paddedX">The x coordinate in the padded grid</param>
+    /// <param name="y">The y coordinate</param>
+    /// <param name="paddedZ">The z coordinate in the padded grid</param>
+    /// <returns>The index in the 1D voxel array</returns>
     private int GetVoxelIndex(int paddedX, int y, int paddedZ)
     {
         return paddedZ + (y * _paddedWidth) + (paddedX * _paddedWidth * _height);
@@ -239,6 +268,9 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Calculates the 1D index for the heightmap array based on padded coordinates. Assumes X-major, then Z layout.
     /// </summary>
+    /// <param name="paddedX">The x coordinate in the padded grid</param>
+    /// <param name="paddedZ">The z coordinate in the padded grid</param>
+    /// <returns>The index in the 1D height map array</returns>
     private int GetMapIndex(int paddedX, int paddedZ)
     {
         return paddedZ + (paddedX * _paddedWidth);

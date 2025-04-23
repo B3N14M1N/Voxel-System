@@ -8,11 +8,10 @@ using VoxelSystem.Generators;
 using VoxelSystem.Managers;
 
 /// <summary>
-/// Represents and manages the process of generating different components (data, mesh, collider) for a single chunk based on specified flags.
+/// Manages the asynchronous generation of chunk components including data, mesh and collider.
 /// </summary>
 public class ChunkJob
 {
-
     private ChunkDataGenerator _chunkDataGenerator;
     private ChunkColliderGenerator _chunkColliderGenerator;
     private ChunkParallelMeshGenerator _chunkParallelMeshGenerator;
@@ -25,18 +24,21 @@ public class ChunkJob
     private bool _meshScheduled;
 
     /// <summary>
-    /// Gets the generation data associated with this job, including position and flags.
+    /// Gets the generation data for this job, containing position and generation flags.
     /// </summary>
     public GenerationData GenerationData { get; private set; }
 
     /// <summary>
-    /// Static counter tracking the number of active or processed jobs.
+    /// Gets the count of actively processing jobs.
     /// </summary>
     public static int Processed { get; private set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChunkJob"/> class, setting up the required generators based on flags and starting the process.
+    /// Creates a new chunk generation job and initiates processing.
     /// </summary>
+    /// <param name="generationData">The data specifying what to generate</param>
+    /// <param name="chunksManager">The manager responsible for chunk lifecycle</param>
+    /// <param name="cancellationToken">Token to cancel the job</param>
     public ChunkJob(GenerationData generationData,
         IChunksManager chunksManager,
         CancellationToken cancellationToken)
@@ -88,9 +90,9 @@ public class ChunkJob
     }
 
     /// <summary>
-    /// Checks the status of scheduled generation tasks (data, collider, mesh) and processes their completion, potentially scheduling subsequent tasks.
+    /// Checks and processes completed generation tasks, potentially scheduling subsequent tasks.
     /// </summary>
-    /// <returns>True if the entire job (all requested flags) is completed, false otherwise.</returns>
+    /// <returns>True if all requested generation is complete</returns>
     public bool Complete()
     {
         if (_dataScheduled && _chunkDataGenerator.IsComplete)
@@ -161,8 +163,9 @@ public class ChunkJob
     }
 
     /// <summary>
-    /// Asynchronously waits until the generation job is fully completed or cancellation is requested.
+    /// Begins the asynchronous generation process.
     /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation</param>
     public async void StartGenerating(CancellationToken cancellationToken)
     {
         try
@@ -176,8 +179,9 @@ public class ChunkJob
     }
 
     /// <summary>
-    /// Disposes the internal generator instances used by this job.
+    /// Releases resources used by this job.
     /// </summary>
+    /// <param name="disposeData">Whether to also dispose data resources</param>
     public void Dispose(bool disposeData = false)
     {
         _chunkDataGenerator?.Dispose(disposeData);

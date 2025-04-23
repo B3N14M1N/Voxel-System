@@ -7,27 +7,50 @@ using UnityEngine;
 
 namespace VoxelSystem.Data.Structs
 {
+    /// <summary>
+    /// Represents mesh data using native arrays for efficient processing in jobs.
+    /// </summary>
     [Serializable]
     public struct MeshDataStruct
     {
+        /// <summary>
+        /// The vertices of the mesh.
+        /// </summary>
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public NativeArray<float3> vertices;
 
+        /// <summary>
+        /// The triangle indices of the mesh.
+        /// </summary>
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public NativeArray<int> indices;
 
+        /// <summary>
+        /// The current count of vertices.
+        /// </summary>
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public NativeReference<int> vertsCount;
 
+        /// <summary>
+        /// The current count of triangle indices.
+        /// </summary>
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public NativeReference<int> trisCount;
 
+        /// <summary>
+        /// Whether the mesh data has been initialized.
+        /// </summary>
         public bool Initialized;
 
+        /// <summary>
+        /// Initializes the mesh data with the specified capacity.
+        /// </summary>
+        /// <param name="verticesSize">The maximum number of vertices</param>
+        /// <param name="indicesSize">The maximum number of indices</param>
         public void Initialize(int verticesSize, int indicesSize)
         {
             vertsCount = new(0, Allocator.Persistent);
@@ -39,6 +62,9 @@ namespace VoxelSystem.Data.Structs
             Initialized = true;
         }
 
+        /// <summary>
+        /// Releases all allocated native collections.
+        /// </summary>
         public void Dispose()
         {
             Initialized = false;
@@ -48,6 +74,10 @@ namespace VoxelSystem.Data.Structs
             if (trisCount.IsCreated) trisCount.Dispose();
         }
 
+        /// <summary>
+        /// Creates a Unity mesh from the stored vertex and index data.
+        /// </summary>
+        /// <returns>A new Unity Mesh object</returns>
         public Mesh GenerateMesh()
         {
             if (!Initialized) return null;

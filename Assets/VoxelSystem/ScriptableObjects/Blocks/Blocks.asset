@@ -31,3 +31,4 @@ MonoBehaviour:
   - <VoxelType>k__BackingField: 4
     <TopTexture>k__BackingField: {fileID: 2800000, guid: c94828f88b909b744997238cb95da18e, type: 3}
     <SideTexture>k__BackingField: {fileID: 2800000, guid: c94828f88b909b744997238cb95da18e, type: 3}
+  <TextureSize>k__BackingField: 16

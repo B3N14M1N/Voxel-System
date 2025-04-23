@@ -4,16 +4,20 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
+/// <summary>
+/// Calculates which chunks should be visible based on distance from a center point.
+/// Uses Unity Jobs and Burst compilation for efficient chunk filtering and sorting.
+/// </summary>
 public class ChunksRenderView
 {
     private NativeArray<float3> chunks;
     private JobHandle jobHandle;
 
     /// <summary>
-    /// Initializes a new instance of the ChunksRenderView class.
+    /// Creates a new chunk render view calculation centered on a position.
     /// </summary>
-    /// <param name="center">The center position.</param>
-    /// <param name="halfRange">The half range.</param>
+    /// <param name="center">The center position to calculate around</param>
+    /// <param name="halfRange">The radius of chunks to include</param>
     public ChunksRenderView(Vector3 center, int halfRange)
     {
         int size = (halfRange * 2 + 1);
@@ -29,9 +33,9 @@ public class ChunksRenderView
     }
 
     /// <summary>
-    /// Completes the job and returns the sorted chunks.
+    /// Waits for the job to complete and returns the visible chunks.
     /// </summary>
-    /// <returns>The sorted chunks.</returns>
+    /// <returns>Array of chunk positions, sorted by distance from center</returns>
     public Vector3[] Complete()
     {
         jobHandle.Complete();
@@ -39,7 +43,7 @@ public class ChunksRenderView
     }
 
     /// <summary>
-    /// Disposes of the NativeArray.
+    /// Releases resources used by this object.
     /// </summary>
     public void Dispose()
     {
@@ -48,13 +52,16 @@ public class ChunksRenderView
     }
 
     /// <summary>
-    /// Finalizes the object and disposes of the NativeArray.
+    /// Finalizer that ensures resources are properly released.
     /// </summary>
     ~ChunksRenderView()
     {
         Dispose();
     }
 
+    /// <summary>
+    /// Job that filters and sorts chunks by distance from the center.
+    /// </summary>
     [BurstCompile(OptimizeFor = OptimizeFor.Performance)]
     protected struct ChunksFilterJob : IJob
     {
@@ -63,7 +70,7 @@ public class ChunksRenderView
         public NativeArray<float3> Chunks;
 
         /// <summary>
-        /// Executes the job.
+        /// Populates the Chunks array with positions and sorts them by distance.
         /// </summary>
         public void Execute()
         {
@@ -83,17 +90,17 @@ public class ChunksRenderView
         /// <summary>
         /// Calculates the squared distance between two positions.
         /// </summary>
-        /// <param name="center">The center position.</param>
-        /// <param name="position">The position.</param>
-        /// <returns>The squared distance.</returns>
+        /// <param name="center">The center position</param>
+        /// <param name="position">The position to check</param>
+        /// <returns>The squared distance</returns>
         private readonly float ChunkRangeMagnitude(Vector3 center, Vector3 position)
             => (position.x - center.x) * (position.x - center.x) + (position.z - center.z) * (position.z - center.z);
 
         /// <summary>
-        /// Sorts the chunks using merge sort.
+        /// Recursively sorts the chunks array by distance.
         /// </summary>
-        /// <param name="left">The left index.</param>
-        /// <param name="right">The right index.</param>
+        /// <param name="left">The left index</param>
+        /// <param name="right">The right index</param>
         private void Sort(int left, int right)
         {
             if (left >= right)
@@ -108,9 +115,9 @@ public class ChunksRenderView
         /// <summary>
         /// Merges two sorted subarrays.
         /// </summary>
-        /// <param name="left">The left index.</param>
-        /// <param name="mid">The middle index.</param>
-        /// <param name="right">The right index.</param>
+        /// <param name="left">The left index</param>
+        /// <param name="mid">The middle index</param>
+        /// <param name="right">The right index</param>
         private void MergeSort(int left, int mid, int right)
         {
             int n1 = mid - left + 1;

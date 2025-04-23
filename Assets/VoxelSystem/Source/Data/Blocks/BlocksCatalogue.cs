@@ -8,19 +8,38 @@ using UnityEngine;
 namespace VoxelSystem.Data.Blocks
 {
     /// <summary>
-    /// 
+    /// Texture size options for block textures in the voxel system.
+    /// </summary>
+    public enum TextureSize
+    {
+        Size8x8 = 8,
+        Size16x16 = 16,
+        Size32x32 = 32,
+        Size64x64 = 64,
+        Size128x128 = 128
+    }
+
+    /// <summary>
+    /// Manages the collection of block types and their textures in the voxel system.
     /// </summary>
     [CreateAssetMenu(fileName = "Blocks", menuName = "Voxel System/Blocks Catalogue", order = 0)]
     public class BlocksCatalogue : ScriptableObject, IDisposable
     {
+        private TextureSize TextureSize { get; set; } = TextureSize.Size16x16;
         [field: SerializeField] private List<Material> Materials { get; set; }
         [field: SerializeField] private List<Block> Blocks { get; set; }
+        [field: SerializeField, Tooltip("Size of texture in pixels (both width and height)")] 
+
         public NativeParallelHashMap<int, int> TextureMapping { get; private set; }
 
+        /// <summary>
+        /// Generates a texture atlas from the block textures and returns a mapping of voxel types to texture indices.
+        /// </summary>
+        /// <returns>A mapping of voxel type IDs to texture indices</returns>
         public NativeParallelHashMap<int, int> GenerateAtlas()
         {
             int blockCount = Blocks.Count;
-            int textureSize = 16; // Assuming all textures are 16x16
+            int textureSize = (int)TextureSize; // Using configurable texture size
 
             Texture2DArray textureArray = new(textureSize, textureSize, blockCount * 2, TextureFormat.RGBA32, false)
             {
@@ -29,7 +48,6 @@ namespace VoxelSystem.Data.Blocks
             };
 
             NativeParallelHashMap<int, int> textureMapping = new(Blocks.Count, Allocator.Persistent);
-            //Dictionary<VoxelType, int> textureMapping = new Dictionary<VoxelType, int>();
 
             var placeholder = CreateBlankTexture(textureSize);
             for (int i = 0; i < blockCount; i++)
@@ -57,22 +75,51 @@ namespace VoxelSystem.Data.Blocks
             return textureMapping;
         }
 
+        /// <summary>
+        /// Converts a texture to linear format and resizes it to the target size.
+        /// </summary>
+        /// <param name="texture">The source texture</param>
+        /// <param name="size">The target size of the texture</param>
+        /// <returns>A new texture in linear format with the specified size</returns>
         private Texture2D ConvertToLinear(Texture2D texture, int size)
         {
+            // Create a new texture with the target size
             Texture2D linearTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
             linearTexture.filterMode = FilterMode.Point;
             linearTexture.wrapMode = TextureWrapMode.Clamp;
 
-            Color32[] pixels = texture.GetPixels32();
-            for (int i = 0; i < pixels.Length; i++)
+            if (texture.width == size && texture.height == size)
             {
-                pixels[i] = pixels[i];
+                // If the texture is already the correct size, just copy the pixels
+                linearTexture.SetPixels32(texture.GetPixels32());
             }
-            linearTexture.SetPixels32(pixels);
+            else
+            {
+                // Create a temporary RenderTexture for resizing
+                RenderTexture rt = RenderTexture.GetTemporary(size, size, 0, RenderTextureFormat.ARGB32);
+                rt.filterMode = FilterMode.Point;
+
+                // Copy the source texture to the temporary RenderTexture with resizing
+                RenderTexture.active = rt;
+                Graphics.Blit(texture, rt);
+
+                // Read the resized texture data back
+                linearTexture.ReadPixels(new Rect(0, 0, size, size), 0, 0);
+                
+                // Clean up
+                RenderTexture.active = null;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+
             linearTexture.Apply();
             return linearTexture;
         }
 
+        /// <summary>
+        /// Creates a transparent texture of the specified size.
+        /// </summary>
+        /// <param name="size">The size of the texture in pixels</param>
+        /// <returns>A new blank transparent texture</returns>
         private Texture2D CreateBlankTexture(int size)
         {
             Texture2D blankTexture = new(size, size, TextureFormat.RGBA32, false)
@@ -90,6 +137,10 @@ namespace VoxelSystem.Data.Blocks
             return blankTexture;
         }
 
+        /// <summary>
+        /// Saves the texture array as an asset in the project.
+        /// </summary>
+        /// <param name="textureArray">The texture array to save</param>
         private void SaveAtlas(Texture2DArray textureArray)
         {
 #if UNITY_EDITOR
@@ -117,10 +168,13 @@ namespace VoxelSystem.Data.Blocks
 #endif
         }
 
+        /// <summary>
+        /// Releases allocated native resources.
+        /// </summary>
         public void Dispose()
         {
             Debug.Log("[Blocks Catalogue] Disposing of Texture Mapping");
-            if(TextureMapping.IsCreated) TextureMapping.Dispose();
+            if (TextureMapping.IsCreated) TextureMapping.Dispose();
         }
     }
 }

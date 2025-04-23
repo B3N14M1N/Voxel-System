@@ -4,8 +4,7 @@ using VoxelSystem.Factory;
 using VoxelSystem.Managers;
 
 /// <summary>
-/// Manages the lifecycle and visual representation (GameObject, Mesh, Collider, Material)
-/// of a single chunk instance in the game world. Implements IDisposable for proper cleanup.
+/// Manages the visual representation of a chunk in the game world, handling its GameObject, mesh, and collider.
 /// </summary>
 public class ChunkViewHandler : IDisposable
 {
@@ -16,23 +15,22 @@ public class ChunkViewHandler : IDisposable
     private IChunksManager _chunksManager;
 
     /// <summary>
-    /// Gets a value indicating whether a valid mesh has been generated and assigned to this chunk view.
+    /// Gets a value indicating whether a mesh has been assigned to this chunk.
     /// </summary>
     public bool IsMeshGenerated { get; private set; }
 
     /// <summary>
-    /// Gets a value indicating whether a valid collider mesh has been generated and assigned to this chunk view.
+    /// Gets a value indicating whether a collider mesh has been assigned to this chunk.
     /// </summary>
     public bool IsColliderGenerated { get; private set; }
 
     /// <summary>
-    /// Gets a value indicating whether the underlying GameObject instance for this chunk view has been created.
+    /// Gets a value indicating whether the GameObject for this chunk has been created.
     /// </summary>
     public bool IsInstantiated => _chunkInstance != null;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the chunk's GameObject is active in the scene.
-    /// Setting this value only has an effect if the chunk instance has been created.
+    /// Gets or sets whether the chunk's GameObject is active in the scene.
     /// </summary>
     public bool IsActive
     {
@@ -41,8 +39,7 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the chunk's MeshRenderer is enabled.
-    /// Setting this value ensures the MeshRenderer component exists before attempting to modify it.
+    /// Gets or sets whether the chunk's renderer is enabled.
     /// </summary>
     public bool IsRenderEnabled
     {
@@ -51,9 +48,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ChunkViewHandler"/> class.
+    /// Creates a new chunk view handler with a reference to the chunks manager.
     /// </summary>
-    /// <param name="chunksManager">Reference to the central chunks manager for callbacks (e.g., updating stats).</param>
+    /// <param name="chunksManager">The manager that owns this chunk</param>
     public ChunkViewHandler(IChunksManager chunksManager)
     {
         _chunksManager = chunksManager;
@@ -62,13 +59,11 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Creates the underlying GameObject instance for this chunk view if it doesn't already exist.
-    /// Sets its initial position, parent, layer, and adds necessary components.
-    /// If the instance already exists, it only updates its transform.
+    /// Creates the GameObject for this chunk and adds the necessary components.
     /// </summary>
-    /// <param name="position">The logical chunk coordinate (e.g., (0,0), (1,0)) used for naming and positioning.</param>
-    /// <param name="defaultParent">The parent transform for the new GameObject instance.</param>
-    /// <param name="layerMask">The layer mask to apply to the chunk GameObject.</param>
+    /// <param name="position">The logical position of the chunk</param>
+    /// <param name="defaultParent">The transform to parent the chunk to</param>
+    /// <param name="layerMask">The layer mask to apply to the chunk</param>
     public void CreateInstance(Vector3 position, Transform defaultParent = null, LayerMask layerMask = default)
     {
         if (!IsInstantiated)
@@ -94,9 +89,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Updates the name and world position of the chunk's GameObject based on its logical chunk coordinates.
+    /// Updates the name and position of the chunk GameObject.
     /// </summary>
-    /// <param name="position">The logical chunk coordinate (e.g., (0,0), (1,0)).</param>
+    /// <param name="position">The logical position of the chunk</param>
     public void UpdateInstanceTransform(Vector3 position)
     {
         if (!IsInstantiated) return;
@@ -105,10 +100,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Assigns a new mesh to the MeshFilter, destroying the previous one if it exists.
-    /// Updates mesh generation status and notifies the ChunksManager about mesh size changes.
+    /// Assigns a new mesh to the chunk's MeshFilter.
     /// </summary>
-    /// <param name="mesh">The new mesh to assign. Pass null to clear the mesh.</param>
+    /// <param name="mesh">The mesh to assign</param>
     public void UploadMesh(Mesh mesh)
     {
         if (!EnsureMeshFilter()) return;
@@ -134,10 +128,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Assigns a new mesh to the MeshCollider, destroying the previous one if it exists.
-    /// Updates collider generation status and notifies the ChunksManager about collider size changes.
+    /// Assigns a new mesh to the chunk's collider.
     /// </summary>
-    /// <param name="mesh">The new collider mesh to assign. Pass null to clear the collider mesh.</param>
+    /// <param name="mesh">The mesh to use for the collider</param>
     public void UploadColliderMesh(Mesh mesh)
     {
         if (!EnsureCollider()) return;
@@ -158,10 +151,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Applies the specified material to the chunk's MeshRenderer.
-    /// Ensures the MeshRenderer component exists before applying.
+    /// Applies a material to the chunk's renderer.
     /// </summary>
-    /// <param name="material">The material to apply.</param>
+    /// <param name="material">The material to apply</param>
     public void ApplyMaterial(Material material)
     {
         if (EnsureRenderer())
@@ -171,8 +163,7 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Clears both the visual mesh and the collider mesh associated with this chunk view.
-    /// Updates generation status flags accordingly.
+    /// Removes both the visual mesh and collider mesh from the chunk.
     /// </summary>
     public void ClearMeshAndCollider()
     {
@@ -184,8 +175,7 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Prepares the chunk view instance for object pooling by deactivating it,
-    /// renaming it, and clearing its mesh and collider data.
+    /// Prepares the chunk for reuse by clearing its data and deactivating it.
     /// </summary>
     public void PrepareForPooling()
     {
@@ -198,8 +188,7 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Releases resources used by the ChunkViewHandler. Destroys the associated GameObject
-    /// and clears component references. Ensures meshes are destroyed via ClearMeshAndCollider.
+    /// Releases all resources used by this chunk view.
     /// </summary>
     public void Dispose()
     {
@@ -216,10 +205,10 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Extracts the numerical index of the first enabled layer within a LayerMask.
+    /// Gets the first enabled layer index from a layer mask.
     /// </summary>
-    /// <param name="layerMask">The LayerMask to inspect.</param>
-    /// <returns>The index of the first enabled layer, or -1 if the mask is empty or invalid.</returns>
+    /// <param name="layerMask">The layer mask to extract the layer from</param>
+    /// <returns>The index of the first enabled layer, or -1 if none found</returns>
     private int GetLayerIndex(LayerMask layerMask)
     {
         int layerValue = layerMask.value;
@@ -234,9 +223,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Ensures the MeshFilter component reference is valid, attempting to get it if null.
+    /// Ensures the MeshFilter component is available.
     /// </summary>
-    /// <returns>True if the MeshFilter component is available, false otherwise.</returns>
+    /// <returns>True if the component is available, false otherwise</returns>
     private bool EnsureMeshFilter()
     {
         if (!IsInstantiated) return false;
@@ -245,9 +234,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Ensures the MeshRenderer component reference is valid, attempting to get it if null.
+    /// Ensures the MeshRenderer component is available.
     /// </summary>
-    /// <returns>True if the MeshRenderer component is available, false otherwise.</returns>
+    /// <returns>True if the component is available, false otherwise</returns>
     private bool EnsureRenderer()
     {
         if (!IsInstantiated) return false;
@@ -256,9 +245,9 @@ public class ChunkViewHandler : IDisposable
     }
 
     /// <summary>
-    /// Ensures the MeshCollider component reference is valid, attempting to get it if null.
+    /// Ensures the MeshCollider component is available.
     /// </summary>
-    /// <returns>True if the MeshCollider component is available, false otherwise.</returns>
+    /// <returns>True if the component is available, false otherwise</returns>
     private bool EnsureCollider()
     {
         if (!IsInstantiated) return false;

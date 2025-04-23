@@ -13,12 +13,16 @@ using VoxelSystem.Factory;
 namespace VoxelSystem.Managers
 {
     /// <summary>
-    /// 
+    /// Manages chunk lifecycle, including creation, updating, and caching based on player position.
     /// </summary>
     public class ChunksManager : IChunksManager
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+        
+        /// <summary>
+        /// Gets the center position around which chunks are generated.
+        /// </summary>
         public Vector3 Center { get; private set; }
 
         private readonly Queue<Chunk> _pool = new();
@@ -30,6 +34,10 @@ namespace VoxelSystem.Managers
         private Dictionary<Vector3, Chunk> _cached = new();
         private Dictionary<Vector3, Chunk> _generating = new();
         private Vector3[] _chunksPositionCheck;
+        
+        /// <summary>
+        /// Creates a new chunk instance or retrieves one from the pool.
+        /// </summary>
         private Chunk NewChunk
         {
             get
@@ -44,9 +52,10 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Creates a new chunks manager with optional layer mask and parent transform.
         /// </summary>
-        /// <param name="transform"></param>
+        /// <param name="layerMask">The layer mask to apply to chunks</param>
+        /// <param name="transform">The parent transform for chunks</param>
         public ChunksManager(LayerMask layerMask = default, Transform transform = null)
         {
             _parent = transform;
@@ -60,7 +69,7 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Generates an array of positions around the center to check for visible chunks.
         /// </summary>
         public void GenerateChunksPositionsCheck()
         {
@@ -70,10 +79,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Updates the visible chunks around a new center position.
         /// </summary>
-        /// <param name="center"></param>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <param name="center">The new center position</param>
         public void UpdateChunks(Vector3 center)
         {
             var UpdateTime = Time.realtimeSinceStartup;
@@ -118,9 +126,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Clears a chunk and returns it to the pool or disposes it.
         /// </summary>
-        /// <param name="chunk"></param>
+        /// <param name="chunk">The chunk to clear</param>
         private void ClearChunkAndEnqueue(Chunk chunk)
         {
             chunk.ClearChunk();
@@ -134,9 +142,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Gets a chunk from the pool or creates a new one if the pool is empty.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A chunk ready for reuse</returns>
         private Chunk GetPooledChunk()
         {
             if (_pool.Count == 0 && _chunksToClear.Count > 0)
@@ -154,11 +162,11 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Attempts to find a chunk at the specified position in the given dictionary.
         /// </summary>
-        /// <param name="pos"></param>
-        /// <param name="source"></param>
-        /// <returns></returns>
+        /// <param name="pos">The position to search for</param>
+        /// <param name="source">The dictionary to search in</param>
+        /// <returns>The chunk if found, null otherwise</returns>
         private Chunk GetChunkFromSource(Vector3 pos, ref Dictionary<Vector3, Chunk> source)
         {
             if (source == null)
@@ -168,10 +176,10 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Retrieves a chunk at the specified position from any of the chunk collections.
         /// </summary>
-        /// <param name="pos"></param>
-        /// <returns></returns>
+        /// <param name="pos">The position to get the chunk from</param>
+        /// <returns>The chunk at the specified position, or null if none exists</returns>
         public Chunk GetChunk(Vector3 pos)
         {
             Chunk chunk = (GetChunkFromSource(pos, ref _active)
@@ -182,9 +190,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Marks a chunk position as being generated and prepares a chunk for it.
         /// </summary>
-        /// <param name="pos"></param>
+        /// <param name="pos">The position of the chunk</param>
         public void SetChunkToGenerating(Vector3 pos)
         {
             Chunk chunk = GetChunk(pos);
@@ -206,9 +214,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Marks a generating chunk as complete and moves it to the active collection.
         /// </summary>
-        /// <param name="pos"></param>
+        /// <param name="pos">The position of the chunk</param>
         public void CompleteGeneratingChunk(Vector3 pos)
         {
             if (_generating.TryGetValue(pos, out Chunk chunk))
@@ -362,9 +370,9 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Clears chunks asynchronously based on distance from the center.
         /// </summary>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">The cancellation token to stop the operation</param>
         private async void ClearChunksAsync(CancellationToken cancellationToken)
         {
             List<Vector3> removals = (from key in _cached.Keys
@@ -393,7 +401,7 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// 
+        /// Disposes all resources used by the chunks manager.
         /// </summary>
         public void Dispose()
         {

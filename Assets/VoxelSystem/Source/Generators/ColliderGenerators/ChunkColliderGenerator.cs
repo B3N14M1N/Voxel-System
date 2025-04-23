@@ -10,14 +10,36 @@ using VoxelSystem.Managers;
 
 namespace VoxelSystem.Generators
 {
+    /// <summary>
+    /// Generates simplified collision meshes for chunks based on height map data.
+    /// </summary>
     public class ChunkColliderGenerator
     {
+        /// <summary>
+        /// Data describing what is being generated.
+        /// </summary>
         public GenerationData GenerationData { get; private set; }
+        
+        /// <summary>
+        /// The mesh data structure for the collider.
+        /// </summary>
         public MeshDataStruct colliderData;
+        
         private JobHandle jobHandle;
+        
+        /// <summary>
+        /// Whether the collider generation job has completed.
+        /// </summary>
         public bool IsComplete => jobHandle.IsCompleted;
+        
         private readonly IChunksManager _chunksManager;
 
+        /// <summary>
+        /// Creates a new collider generator for a chunk.
+        /// </summary>
+        /// <param name="generationData">Data describing what to generate</param>
+        /// <param name="heightMap">The height map data array</param>
+        /// <param name="chunksManager">The chunks manager</param>
         public ChunkColliderGenerator(GenerationData generationData,
             ref NativeArray<HeightMap> heightMap,
             IChunksManager chunksManager)
@@ -37,6 +59,10 @@ namespace VoxelSystem.Generators
             jobHandle = dataJob.Schedule();
         }
 
+        /// <summary>
+        /// Completes the collider generation job and applies the collider to the chunk.
+        /// </summary>
+        /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
             if (IsComplete)
@@ -59,14 +85,19 @@ namespace VoxelSystem.Generators
             return GenerationData;
         }
 
+        /// <summary>
+        /// Releases resources used by this generator.
+        /// </summary>
         public void Dispose()
         {
             jobHandle.Complete();
             colliderData.Dispose();
         }
 
-        // --- The Burst Compiled Job ---
-        [BurstCompile(CompileSynchronously = false, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)] // Adjust precision as needed
+        /// <summary>
+        /// Job that generates collider mesh data for a chunk.
+        /// </summary>
+        [BurstCompile(CompileSynchronously = false, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)]
         internal struct ChunkColliderJob : IJob
         {
             [ReadOnly] public int chunkWidth;
@@ -75,6 +106,9 @@ namespace VoxelSystem.Generators
             [NativeDisableContainerSafetyRestriction][ReadOnly]public NativeArray<HeightMap> heightMap;
             [NativeDisableContainerSafetyRestriction] public MeshDataStruct colliderData;
 
+            /// <summary>
+            /// Generates collider mesh data based on the height map.
+            /// </summary>
             public void Execute()
             {
                 colliderData.vertsCount.Value = 0;
@@ -138,8 +172,17 @@ namespace VoxelSystem.Generators
                 vertexMap.Dispose();
             }
 
+            /// <summary>
+            /// Calculates the index in the heightmap array from 2D coordinates.
+            /// </summary>
             private readonly int GetMapIndex(int x, int z) => z + (x * (chunkWidth + 2));
 
+            /// <summary>
+            /// Adds a vertex to the mesh data, reusing existing vertices when possible.
+            /// </summary>
+            /// <param name="vertexMap">Map of existing vertices</param>
+            /// <param name="position">Position of the vertex</param>
+            /// <returns>Index of the vertex</returns>
             private int AddVertex(ref NativeHashMap<int3, int> vertexMap, float3 position)
             {
                 int3 key = new((int)position.x, (int)position.y, (int)position.z);
@@ -153,6 +196,9 @@ namespace VoxelSystem.Generators
                 return index;
             }
 
+            /// <summary>
+            /// Adds a quad face to the mesh data using the given vertex indices.
+            /// </summary>
             private void AddFace(int v0, int v1, int v2, int v3)
             {
                 colliderData.indices[colliderData.trisCount.Value++] = v0;
@@ -164,5 +210,4 @@ namespace VoxelSystem.Generators
             }
         }
     }
-
 }
