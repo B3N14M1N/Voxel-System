@@ -14,7 +14,7 @@ public class ChunkJob
 {
     private ChunkDataGenerator _chunkDataGenerator;
     private ChunkColliderGenerator _chunkColliderGenerator;
-    private ChunkParallelMeshGenerator _chunkParallelMeshGenerator;
+    private IChunkMeshGenerator _chunkMeshGenerator;
     private readonly IChunksManager _chunksManager;
     private readonly Chunk _chunk;
     private readonly bool _regenerating = false;
@@ -72,7 +72,7 @@ public class ChunkJob
                 }
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
-                    _chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
+                    _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
                     _meshScheduled = true;
                     _regenerating = true;
                     _completed = false;
@@ -117,7 +117,7 @@ public class ChunkJob
                 }
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
-                    _chunkParallelMeshGenerator = new ChunkParallelMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
+                    _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
                     _meshScheduled = true;
                 }
             }
@@ -142,10 +142,10 @@ public class ChunkJob
             return _completed;
         }
 
-        if (_meshScheduled && _chunkParallelMeshGenerator.IsComplete)
+        if (_meshScheduled && _chunkMeshGenerator.IsComplete)
         {
             _meshScheduled = false;
-            GenerationData = _chunkParallelMeshGenerator.Complete();
+            GenerationData = _chunkMeshGenerator.Complete();
 
             if (GenerationData.flags == ChunkGenerationFlags.None)
             {
@@ -155,7 +155,7 @@ public class ChunkJob
                 if (_regenerating == false)
                     Processed -= 1;
             }
-            _chunkParallelMeshGenerator = null;
+            _chunkMeshGenerator = null;
             return _completed;
         }
 
@@ -185,7 +185,7 @@ public class ChunkJob
     public void Dispose(bool disposeData = false)
     {
         _chunkDataGenerator?.Dispose(disposeData);
-        _chunkParallelMeshGenerator?.Dispose();
+        _chunkMeshGenerator?.Dispose();
         _chunkColliderGenerator?.Dispose();
     }
 }

@@ -164,7 +164,7 @@ namespace VoxelSystem.Factory
         public void OnApplicationQuit()
         {
             Dispose();
-            ChunkParallelMeshGenerator.DisposeAll();
+            ChunkMeshGenerator.DisposeAll();
             _cancellationTokenSource.Cancel();
         }
 
