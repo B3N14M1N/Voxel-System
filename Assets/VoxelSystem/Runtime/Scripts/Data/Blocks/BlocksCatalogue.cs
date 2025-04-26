@@ -25,10 +25,10 @@ namespace VoxelSystem.Data.Blocks
     [CreateAssetMenu(fileName = "Blocks", menuName = "Voxel System/Blocks Catalogue", order = 0)]
     public class BlocksCatalogue : ScriptableObject, IDisposable
     {
-        private TextureSize TextureSize { get; set; } = TextureSize.Size16x16;
+        [field: SerializeField] private string ATLAS_PATH { get; set; } = "Assets/VoxelSystem/Samples/Demo/Resources/Textures/Blocks/Atlas";
+        [field: SerializeField] private TextureSize TextureSize { get; set; } = TextureSize.Size16x16;
         [field: SerializeField] private List<Material> Materials { get; set; }
         [field: SerializeField] private List<Block> Blocks { get; set; }
-        [field: SerializeField, Tooltip("Size of texture in pixels (both width and height)")] 
 
         public NativeParallelHashMap<int, int> TextureMapping { get; private set; }
 
@@ -105,7 +105,7 @@ namespace VoxelSystem.Data.Blocks
 
                 // Read the resized texture data back
                 linearTexture.ReadPixels(new Rect(0, 0, size, size), 0, 0);
-                
+
                 // Clean up
                 RenderTexture.active = null;
                 RenderTexture.ReleaseTemporary(rt);
@@ -144,13 +144,12 @@ namespace VoxelSystem.Data.Blocks
         private void SaveAtlas(Texture2DArray textureArray)
         {
 #if UNITY_EDITOR
-            string directoryPath = "Assets/VoxelSystem/Resources/Textures/Blocks/Atlas";
-            string assetPath = Path.Combine(directoryPath, "Atlas.asset");
+            string assetPath = Path.Combine(ATLAS_PATH, "Atlas.asset");
 
             // Ensure the directory exists
-            if (!Directory.Exists(directoryPath))
+            if (!Directory.Exists(ATLAS_PATH))
             {
-                Directory.CreateDirectory(directoryPath);
+                Directory.CreateDirectory(ATLAS_PATH);
             }
 
             // Delete existing asset to avoid conflicts

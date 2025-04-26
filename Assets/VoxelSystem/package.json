@@ -4,9 +4,9 @@
   "displayName": "Voxel System",
   "description": "A custom height-based voxel system for Unity",
   "unity": "6.0",
-  "documentationUrl": "https://github.com/yourusername/Voxel-System/Documentation",
-  "changelogUrl": "https://github.com/yourusername/Voxel-System/CHANGELOG.md",
-  "licensesUrl": "https://github.com/yourusername/Voxel-System/LICENSE",
+  "documentationUrl": "https://github.com/b3n14m1n/Voxel-System/Documentation",
+  "changelogUrl": "https://github.com/b3n14m1n/Voxel-System/CHANGELOG.md",
+  "licensesUrl": "https://github.com/b3n14m1n/Voxel-System/LICENSE",
   "keywords": [
     "voxel",
     "terrain",
@@ -16,14 +16,14 @@
   ],
   "author": {
     "name": "Beniamin Cioban",
-    "email": "your.email@example.com",
-    "url": "https://your-website.com"
+    "email": "beniamin.cioban@student.usv.ro",
+    "url": "https://b3n14m1n.github.io/"
   },
   "samples": [
     {
       "displayName": "Demo Scene",
       "description": "Example implementation of the voxel system including example materials, models, textures and prefabs",
-      "path": "Samples~/Demo"
+      "path": "Samples/Demo"
     }
   ],
   "dependencies": {

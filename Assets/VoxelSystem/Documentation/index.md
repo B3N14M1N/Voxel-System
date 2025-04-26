@@ -87,7 +87,7 @@ Modify the `GenerationParameters` ScriptableObject to change terrain generation:
 ### Custom Mesh Generation
 
 The system supports different mesh generation approaches:
-- Single-threaded (ChunkMeshGenerator)
+- Single-threaded (ChunkMeshJob)
 - Parallel (ChunkParallelMeshJob)
 
 These can be selected based on your performance needs.
