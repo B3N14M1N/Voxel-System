@@ -47,16 +47,11 @@ namespace VoxelSystem.Generators
         private readonly IChunksManager _chunksManager;
 
         /// <summary>
-        /// Currently active mesh generator type.
-        /// </summary>
-        public static MeshGeneratorType CurrentGeneratorType { get; set; } = MeshGeneratorType.Parallel;
-        
-        /// <summary>
         /// The atlas block index map for the mesh generation.
         /// </summary>
         private static NativeParallelHashMap<int, int> AtlasIndexMap { get; set; }
-        
-        
+
+
         /// <summary>
         /// Sets the atlas block index map for the mesh generation.
         /// </summary>
@@ -64,7 +59,7 @@ namespace VoxelSystem.Generators
         {
             AtlasIndexMap = atlasIndexMap;
         }
-        
+
         /// <summary>
         /// Static array of cube vertex positions.
         /// </summary>
@@ -160,8 +155,8 @@ namespace VoxelSystem.Generators
             GenerationData generationData,
             ref NativeArray<Voxel> voxels,
             ref NativeArray<HeightMap> map,
-            IChunksManager chunksManager,
-            MeshGeneratorType? generatorType = null)
+            IChunksManager chunksManager
+            )
         {
             _chunksManager = chunksManager;
             GenerationData = generationData;
@@ -169,46 +164,48 @@ namespace VoxelSystem.Generators
             int indicesSize = WorldSettings.RenderedVoxelsInChunk * 6 * 6 / 2;
             meshData.Initialize(verticesSize, indicesSize);
 
-            MeshGeneratorType type = generatorType ?? CurrentGeneratorType;
+            MeshGeneratorType type = PlayerSettings.MeshGeneratorType;
 
-            if (type == MeshGeneratorType.SingleThreaded)
+            switch (type)
             {
-                var meshJob = new ChunkMeshJob()
-                {
-                    Vertices = Vertices,
-                    FaceCheck = FaceCheck,
-                    FaceVerticeIndex = FaceVerticeIndex,
-                    VerticeUVs = VerticeUVs,
-                    FaceIndices = FaceIndices,
-                    chunkWidth = WorldSettings.ChunkWidth,
-                    chunkHeight = WorldSettings.ChunkHeight,
-                    voxels = voxels,
-                    heightMaps = map,
-                    atlasIndexMap = AtlasIndexMap,
-                    meshData = meshData
-                };
+                case MeshGeneratorType.SingleThreaded:
+                    var singleThreadedJob = new ChunkMeshJob()
+                    {
+                        Vertices = Vertices,
+                        FaceCheck = FaceCheck,
+                        FaceVerticeIndex = FaceVerticeIndex,
+                        VerticeUVs = VerticeUVs,
+                        FaceIndices = FaceIndices,
+                        chunkWidth = WorldSettings.ChunkWidth,
+                        chunkHeight = WorldSettings.ChunkHeight,
+                        voxels = voxels,
+                        heightMaps = map,
+                        atlasIndexMap = AtlasIndexMap,
+                        meshData = meshData
+                    };
 
-                jobHandle = meshJob.Schedule();
-            }
+                    jobHandle = singleThreadedJob.Schedule();
+                    break;
 
-            else if (type == MeshGeneratorType.Parallel)
-            {
-                var meshJob = new ChunkParallelMeshJob()
-                {
-                    Vertices = Vertices,
-                    FaceCheck = FaceCheck,
-                    FaceVerticeIndex = FaceVerticeIndex,
-                    VerticeUVs = VerticeUVs,
-                    FaceIndices = FaceIndices,
-                    chunkWidth = WorldSettings.ChunkWidth,
-                    chunkHeight = WorldSettings.ChunkHeight,
-                    voxels = voxels,
-                    heightMaps = map,
-                    atlasIndexMap = AtlasIndexMap,
-                    meshData = meshData
-                };
+                default: // Default to Parallel
+                case MeshGeneratorType.Parallel:
+                    var parallelJob = new ChunkParallelMeshJob()
+                    {
+                        Vertices = Vertices,
+                        FaceCheck = FaceCheck,
+                        FaceVerticeIndex = FaceVerticeIndex,
+                        VerticeUVs = VerticeUVs,
+                        FaceIndices = FaceIndices,
+                        chunkWidth = WorldSettings.ChunkWidth,
+                        chunkHeight = WorldSettings.ChunkHeight,
+                        voxels = voxels,
+                        heightMaps = map,
+                        atlasIndexMap = AtlasIndexMap,
+                        meshData = meshData
+                    };
 
-                jobHandle = meshJob.Schedule(map.Length, WorldSettings.ChunkWidth);
+                    jobHandle = parallelJob.Schedule(map.Length, WorldSettings.ChunkWidth);
+                    break;
             }
         }
 

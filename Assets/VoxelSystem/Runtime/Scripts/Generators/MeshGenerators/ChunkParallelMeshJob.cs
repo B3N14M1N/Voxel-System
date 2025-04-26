@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
@@ -16,7 +17,6 @@ namespace VoxelSystem.Generators
     [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Standard, OptimizeFor = OptimizeFor.Performance)]
     internal struct ChunkParallelMeshJob : IJobParallelFor
     {
-        #region Input
         [ReadOnly]
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
@@ -66,26 +66,24 @@ namespace VoxelSystem.Generators
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public NativeParallelHashMap<int, int> atlasIndexMap;
-        #endregion
 
-        #region Output
         [NativeDisableParallelForRestriction]
         [NativeDisableContainerSafetyRestriction]
         public MeshDataStruct meshData;
-        #endregion
 
-        #region Methods
         /// <summary>
         /// Calculates the index in the voxel array from 3D coordinates.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private readonly int GetVoxelIndex(int x, int y, int z)
         {
-            return z + (y * (chunkWidth + 2)) + (x * (chunkWidth + 2) * chunkHeight);
+            return z + (y * chunkWidth) + (x * chunkWidth * chunkHeight);
         }
 
         /// <summary>
         /// Calculates the index in the heightmap array from 2D coordinates.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private readonly int GetMapIndex(int x, int z)
         {
             return z + (x * (chunkWidth + 2));
@@ -94,6 +92,7 @@ namespace VoxelSystem.Generators
         /// <summary>
         /// Packs vertex data into a float3 for efficient storage.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, byte id)
         {
             uint x = (uint)uvIndex;
@@ -108,28 +107,28 @@ namespace VoxelSystem.Generators
 
             return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth / chunkHeight, id);
         }
-        #endregion
 
-        #region Execution
         /// <summary>
         /// Generates mesh data for one column of the chunk.
         /// </summary>
         /// <param name="index">Index of the column to process</param>
         public void Execute(int index)
         {
-            int x = index / (chunkWidth + 2);
-            int z = index % (chunkWidth + 2);
+            int paddedX = index / (chunkWidth + 2);
+            int paddedZ = index % (chunkWidth + 2);
+            int x = paddedX - 1;
+            int z = paddedZ - 1;
 
-            if (!(x >= 1 && z >= 1 && x <= chunkWidth && z <= chunkWidth)) return;
+            if (!(paddedX >= 1 && paddedZ >= 1 && paddedX <= chunkWidth && paddedZ <= chunkWidth)) return;
 
             NativeArray<uint> neighbourHeights = new(4, Allocator.Temp);
-            uint maxHeight = (uint)(heightMaps[GetMapIndex(x, z)].GetSolid() - 1);
+            uint maxHeight = (uint)(heightMaps[index].GetSolid() - 1);
             uint min = maxHeight;
 
             for (int i = 0; i < 4; i++)
             {
                 float3 face = FaceCheck[i];
-                neighbourHeights[i] = (uint)(heightMaps[GetMapIndex(x + (int)face.x, z + (int)face.z)].GetSolid() - 1);
+                neighbourHeights[i] = (uint)(heightMaps[GetMapIndex(paddedX + (int)face.x, paddedZ + (int)face.z)].GetSolid() - 1);
                 if (neighbourHeights[i] < min)
                     min = neighbourHeights[i];
             }
@@ -150,22 +149,22 @@ namespace VoxelSystem.Generators
                             continue;
                     }
 
-                    AddFace(i, new(x - 1, y, z - 1), voxel);
+                    AddFace(i, new(x, y, z), voxel);
                 }
             }
 
             if (neighbourHeights.IsCreated) neighbourHeights.Dispose();
         }
-        #endregion
 
         /// <summary>
         /// Adds a face to the mesh data.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void AddFace(int faceIndex, float3 voxelPos, Voxel voxel)
         {
             int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr<int>()[0], 4);
             int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr<int>()[0], 6);
-            byte atlasIndex = (byte)atlasIndexMap[(int)voxel.GetVoxelType()];
+            byte atlasIndex = (byte)atlasIndexMap[(int)voxel.Get()];
 
             for (int j = 0; j < 4; j++)
             {

@@ -8,10 +8,9 @@ using VoxelSystem.Data;
 /// </summary>
 public class ChunkDataHandler : IDisposable
 {
-    private static int _paddedWidth = WorldSettings.ChunkWidth + 2;
     private static int _width = WorldSettings.ChunkWidth;
     private static int _height = WorldSettings.ChunkHeight;
-    private static int _paddedWidthSq = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
+    private static int _paddedWidth = WorldSettings.ChunkWidth + 2;
 
     private NativeArray<Voxel> _voxels;
     private NativeArray<HeightMap> _heightMap;
@@ -45,8 +44,6 @@ public class ChunkDataHandler : IDisposable
         IsDirty = false;
     }
 
-    // --- Public Methods ---
-
     /// <summary>
     /// Takes ownership of generated data arrays, validating sizes. Disposes previous data.
     /// </summary>
@@ -55,12 +52,11 @@ public class ChunkDataHandler : IDisposable
     public void UploadData(ref NativeArray<Voxel> newVoxels, ref NativeArray<HeightMap> newHeightMap)
     {
         Dispose();
-        _paddedWidth = WorldSettings.ChunkWidth + 2;
         _width = WorldSettings.ChunkWidth;
         _height = WorldSettings.ChunkHeight;
-        _paddedWidthSq = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
-        int expectedVoxelLength = _paddedWidth * _height * _paddedWidth;
-        int expectedHeightMapLength = _paddedWidthSq;
+        _paddedWidth = _width + 2;
+        int expectedVoxelLength = _width * _height * _width;
+        int expectedHeightMapLength = _paddedWidth * _paddedWidth;
 
         bool sizeMismatch = false;
 
@@ -108,13 +104,11 @@ public class ChunkDataHandler : IDisposable
     /// <param name="z">The z coordinate within the chunk</param>
     public bool IsVoxelPositionValid(int x, int y, int z)
     {
-        if (!IsDataGenerated || !_voxels.IsCreated) return false;
-
         if (x < 0 || x >= _width ||
             y <= 0 || y >= _height ||
             z < 0 || z >= _width)
         {
-            Debug.LogWarning($"IsVoxelPositionValid called with out-of-bounds local coordinates ({x},{y},{z}). Chunk range is 0-{WorldSettings.ChunkWidth - 1} / 0-{WorldSettings.ChunkHeight - 1}.");
+            Debug.LogWarning($"IsVoxelPositionValid called with out-of-bounds local coordinates ({x},{y},{z}). Chunk range is 0-{_width - 1} / 0-{_height - 1}.");
             return false;
         }
 
@@ -146,7 +140,7 @@ public class ChunkDataHandler : IDisposable
     {
         if (!IsDataGeneratedAndValid() || !IsVoxelPositionValid(x, y, z)) return Voxel.Empty;
 
-        return _voxels[GetVoxelIndex(x + 1, y, z + 1)];
+        return _voxels[GetVoxelIndex(x, y, z)];
     }
 
     /// <summary>
@@ -171,29 +165,32 @@ public class ChunkDataHandler : IDisposable
     {
         if (!IsDataGeneratedAndValid() || !IsVoxelPositionValid(x, y, z)) return false;
 
-        int voxelIndex = GetVoxelIndex(x + 1, y, z + 1);
+        int voxelIndex = GetVoxelIndex(x, y, z);
         int heightMapIndex = GetMapIndex(x + 1, z + 1);
 
         Voxel currentVoxel = _voxels[voxelIndex];
         HeightMap currentHeight = _heightMap[heightMapIndex];
 
         bool wasSolid = !currentVoxel.IsEmpty;
-        bool placedSolid = !voxel.IsEmpty;
+        bool placeSolid = !voxel.IsEmpty;
 
-        if (wasSolid == placedSolid)
+        if (wasSolid == placeSolid)
+        {
+            Debug.LogWarning($"Block {currentVoxel.Get()} already placed at ({x}, {y}, {z}).");
             return false;
+        }
 
         uint currentHeightValue = currentHeight.GetSolid();
 
-        if (currentHeightValue <= 1 && !placedSolid)
+        if (currentHeightValue <= 1 && !placeSolid)
         {
             Debug.LogWarning($"Heightmap underflow detected at ({x + 1},{z + 1}).");
             return false;
         }
 
-        uint newSolidHeight = currentHeightValue + (uint)(placedSolid ? 1 : -1);
+        uint newSolidHeight = currentHeightValue + (uint)(placeSolid ? 1 : -1);
 
-        if (newSolidHeight > WorldSettings.ChunkHeight && !placedSolid)
+        if (newSolidHeight > WorldSettings.ChunkHeight && !placeSolid)
         {
             Debug.LogWarning($"Heightmap overflow detected at ({x + 1},{z + 1}).");
             return false;
@@ -291,23 +288,23 @@ public class ChunkDataHandler : IDisposable
     /// <summary>
     /// Calculates the 1D index for the voxel array based on padded coordinates. Assumes X-major, then Y, then Z layout.
     /// </summary>
-    /// <param name="paddedX">The x coordinate in the padded grid</param>
+    /// <param name="x">The x coordinate</param>
     /// <param name="y">The y coordinate</param>
-    /// <param name="paddedZ">The z coordinate in the padded grid</param>
+    /// <param name="z">The z coordinate</param>
     /// <returns>The index in the 1D voxel array</returns>
-    private int GetVoxelIndex(int paddedX, int y, int paddedZ)
+    private int GetVoxelIndex(int x, int y, int z)
     {
-        return paddedZ + (y * _paddedWidth) + (paddedX * _paddedWidth * _height);
+        return z + (y * _width) + (x * _width * _height);
     }
 
     /// <summary>
     /// Calculates the 1D index for the heightmap array based on padded coordinates. Assumes X-major, then Z layout.
     /// </summary>
-    /// <param name="paddedX">The x coordinate in the padded grid</param>
-    /// <param name="paddedZ">The z coordinate in the padded grid</param>
+    /// <param name="x">The x coordinate</param>
+    /// <param name="z">The z coordinate</param>
     /// <returns>The index in the 1D height map array</returns>
-    private int GetMapIndex(int paddedX, int paddedZ)
+    private int GetMapIndex(int x, int z)
     {
-        return paddedZ + (paddedX * _paddedWidth);
+        return z + (x * _paddedWidth);
     }
 }

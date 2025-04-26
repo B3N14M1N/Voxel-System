@@ -63,7 +63,12 @@ public class VoxelBlockManager : MonoBehaviour
             _previewObject = Instantiate(_blockPrefab);
             _previewObject.SetActive(false);
             _previewObject.TryGetComponent<MeshRenderer>(out _previewRenderer);
-            if (_previewRenderer == null)
+            if (_previewRenderer != null)
+            {
+                // Ensure the preview object has a unique material instance to avoid modifying the original prefab
+                _previewRenderer.sharedMaterial = new Material(_previewRenderer.sharedMaterial);
+            }
+            else
             {
                 Debug.LogWarning("VoxelBlockManager: Preview Prefab does not have a MeshRenderer component.", this);
             }
@@ -124,9 +129,16 @@ public class VoxelBlockManager : MonoBehaviour
     {
         if (_previewObject != null)
         {
+            // Destroy the material instance created for the preview object
+            if(_previewRenderer != null && _previewRenderer.sharedMaterial != null)
+            {
+                Destroy(_previewRenderer.sharedMaterial);
+                _previewRenderer.sharedMaterial = null;
+                _previewRenderer = null;
+            }
+
             Destroy(_previewObject);
             _previewObject = null;
-            _previewRenderer = null;
         }
     }
 

@@ -2,16 +2,20 @@ using System;
 using TMPro;
 using UnityEngine;
 using Zenject;
-
+using VoxelSystem.Managers;
+using VoxelSystem.Generators;
 public class PlayerSettingsGUI : MonoBehaviour, ISettings
 {
-    [Inject] private readonly VoxelSystem.Managers.IChunksManager _chunksManager;
+    [Inject] private readonly IChunksManager _chunksManager;
+
     [Header("Player settings")]
-    public TMP_InputField InputRenderDistance;
-    public TMP_InputField InputCacheDistance;
-    public TMP_InputField InputChunksProcessed;
-    public TMP_InputField InputChunksToLoad;
-    public TMP_InputField InputTimeToLoadNextChunks;
+    [field: SerializeField] private TMP_InputField InputRenderDistance { get; set; }
+    [field: SerializeField] private TMP_InputField InputCacheDistance { get; set; }
+    [field: SerializeField] private TMP_InputField InputChunksProcessed { get; set; }
+    [field: SerializeField] private TMP_InputField InputChunksToLoad { get; set; }
+    [field: SerializeField] private TMP_InputField InputTimeToLoadNextChunks { get; set; }
+    [field: SerializeField] private TMP_Dropdown MeshGeneratorTypeDropdown { get; set; }
+    [field: SerializeField] private bool PrintDebug { get; set; } = false;
 
     public void OnEnable()
     {
@@ -20,15 +24,43 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
 
     public void Load()
     {
+        if (InputRenderDistance == null ||
+            InputCacheDistance == null ||
+            InputChunksProcessed == null ||
+            InputChunksToLoad == null ||
+            InputTimeToLoadNextChunks == null ||
+            MeshGeneratorTypeDropdown == null)
+        {
+            Debug.LogError("PlayerSettingsGUI: One or more input fields are not assigned in the inspector.");
+            return;
+        }
+
         InputRenderDistance.text = PlayerSettings.RenderDistance.ToString();
         InputCacheDistance.text = PlayerSettings.CacheDistance.ToString();
         InputChunksProcessed.text = PlayerSettings.ChunksProcessed.ToString();
         InputChunksToLoad.text = PlayerSettings.ChunksToLoad.ToString();
         InputTimeToLoadNextChunks.text = PlayerSettings.TimeToLoadNextChunks.ToString();
+
+        MeshGeneratorTypeDropdown.ClearOptions();
+        MeshGeneratorTypeDropdown.AddOptions(new System.Collections.Generic.List<string> { "Single-threaded", "Parallel" });
+        MeshGeneratorTypeDropdown.RefreshShownValue();
+
+        MeshGeneratorTypeDropdown.value = (int)PlayerSettings.MeshGeneratorType;
     }
 
     public void Save()
     {
+        if (InputRenderDistance == null ||
+            InputCacheDistance == null ||
+            InputChunksProcessed == null ||
+            InputChunksToLoad == null ||
+            InputTimeToLoadNextChunks == null ||
+            MeshGeneratorTypeDropdown == null)
+        {
+            Debug.LogError("PlayerSettingsGUI: One or more input fields are not assigned in the inspector.");
+            return;
+        }
+
         var valueInt = Convert.ToInt32(InputRenderDistance.text);
         PlayerSettings.RenderDistance = valueInt >= 0 ? valueInt : PlayerSettings.RenderDistance;
         valueInt = Convert.ToInt32(InputCacheDistance.text);
@@ -39,8 +71,19 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         PlayerSettings.ChunksToLoad = valueInt > 0 ? valueInt : PlayerSettings.ChunksToLoad;
         var valueFloat = (float)Convert.ToDouble(InputTimeToLoadNextChunks.text);
         PlayerSettings.TimeToLoadNextChunks = valueFloat >= 0 ? valueFloat : PlayerSettings.TimeToLoadNextChunks;
+        PlayerSettings.MeshGeneratorType = (MeshGeneratorType)MeshGeneratorTypeDropdown.value;
 
         _chunksManager.GenerateChunksPositionsCheck();
         Load();
+
+        if (!PrintDebug) return;
+
+        Debug.Log($"PlayerSettingsGUI - Settings saved:\n" +
+            $"RenderDistance: {PlayerSettings.RenderDistance};\n" +
+            $"CacheDistance: {PlayerSettings.CacheDistance};\n" +
+            $"ChunksProcessed: {PlayerSettings.ChunksProcessed};\n" +
+            $"ChunksToLoad: {PlayerSettings.ChunksToLoad};\n" +
+            $"TimeToLoadNextChunks: {PlayerSettings.TimeToLoadNextChunks};\n" +
+            $"MeshGeneratorType: {PlayerSettings.MeshGeneratorType}");
     }
 }

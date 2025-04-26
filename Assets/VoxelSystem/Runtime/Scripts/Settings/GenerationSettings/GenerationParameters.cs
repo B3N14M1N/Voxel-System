@@ -69,10 +69,7 @@ namespace VoxelSystem.Settings.Generation
 
             // Generate octave offsets if needed or if seed/octave count changed
             // This ensures consistent offsets for a given seed.
-            if (OctaveOffsets == null || OctaveOffsets.Length < maxOctaves)
-            {
-                GenerateOctaveOffsets(maxOctaves);
-            }
+            GenerateOctaveOffsets(maxOctaves);
         }
 
         public void GenerateOctaveOffsets(uint maxOctaves)
