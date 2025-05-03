@@ -93,19 +93,26 @@ namespace VoxelSystem.Generators
         /// Packs vertex data into a float3 for efficient storage.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, byte id)
+        public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int height, byte id)
         {
-            uint x = (uint)uvIndex;
-            x <<= 3;
-            x += (byte)(normalIndex & 0x7);
-            x <<= 8;
-            x += (byte)position.z;
-            x <<= 8;
-            x += (byte)position.y;
-            x <<= 8;
-            x += (byte)position.x;
+            // Use all 32 bits for position: 11 bits for x, 10 bits for y, 11 bits for z
+            // This allows for coordinates up to 2047 for x and z, and up to 1023 for y
+            uint packedPosition = ((uint)position.x & 0x7FF) | (((uint)position.y & 0x3FF) << 11) | (((uint)position.z & 0x7FF) << 21);
 
-            return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth / chunkHeight, id);
+            // Y component: normalIndex (3 bits) + uvIndex (2 bits) + height value in upper bits
+            uint packedData = ((uint)normalIndex & 0x7) | (((uint)uvIndex & 0x3) << 3) | ((uint)height << 5);
+
+            // Z component: texture/material ID
+            float z = id;
+
+            return new float3(asfloat(packedPosition), asfloat(packedData), z);
+        }
+
+        // Helper method to convert uint to float without boxing
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private readonly float asfloat(uint x)
+        {
+            return BitConverter.Int32BitsToSingle((int)x);
         }
 
         /// <summary>
@@ -121,28 +128,28 @@ namespace VoxelSystem.Generators
 
             if (!(paddedX >= 1 && paddedZ >= 1 && paddedX <= chunkWidth && paddedZ <= chunkWidth)) return;
 
-            NativeArray<uint> neighbourHeights = new(4, Allocator.Temp);
-            uint maxHeight = (uint)(heightMaps[index].GetSolid() - 1);
-            uint min = maxHeight;
+            NativeArray<int> neighbourHeights = new(4, Allocator.Temp);
+            int maxHeight = heightMaps[index].GetSolid() - 1;
+            int min = maxHeight;
 
             for (int i = 0; i < 4; i++)
             {
-                float3 face = FaceCheck[i];
-                neighbourHeights[i] = (uint)(heightMaps[GetMapIndex(paddedX + (int)face.x, paddedZ + (int)face.z)].GetSolid() - 1);
+                int3 face = (int3)FaceCheck[i];
+                int mapIndex = GetMapIndex(paddedX + face.x, paddedZ + face.z);
+                neighbourHeights[i] = heightMaps[mapIndex].GetSolid() - 1;
                 if (neighbourHeights[i] < min)
                     min = neighbourHeights[i];
             }
 
-            for (uint y = maxHeight; y >= min; y--)
+            for (int y = maxHeight; y >= min; y--)
             {
-                Voxel voxel = voxels[GetVoxelIndex(x, (int)y, z)];
-
+                Voxel voxel = voxels[GetVoxelIndex(x, y, z)];
                 if (voxel.IsEmpty)
                     continue;
 
                 for (int i = 0; i < 5; i++) // i == 5 skip bottom face
                 {
-                    if (!(y == chunkHeight - 1 && i == 4) || !(y == 0 && i == 5))
+                    if (!(y == chunkHeight && i == 4) || !(y == 0 && i == 5))
                     {
                         if ((i == 4 && y < maxHeight) || // skip top face if its not the top voxel
                         (i < 4 && y <= neighbourHeights[i])) // skip side faces if it can't be seen by the player
@@ -162,8 +169,8 @@ namespace VoxelSystem.Generators
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void AddFace(int faceIndex, float3 voxelPos, Voxel voxel)
         {
-            int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr<int>()[0], 4);
-            int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr<int>()[0], 6);
+            int verts = Interlocked.Add(ref meshData.vertsCount.GetUnsafeReadOnlyPtr()[0], 4);
+            int tris = Interlocked.Add(ref meshData.trisCount.GetUnsafeReadOnlyPtr()[0], 6);
             byte atlasIndex = (byte)atlasIndexMap[(int)voxel.Get()];
 
             for (int j = 0; j < 4; j++)

@@ -26,13 +26,23 @@ void UnpackData_float(in float4 packedData,
 	inout float4 color,
 	inout float textureIndex)
 {
-	int data = asint(packedData.x);
-	vertex = float4(data & 0xff, (data >> 8) & 0xff,(data >> 16) & 0xff, 1.0);
-	normal = float3(MyNormals[(data >> 24) & 0x7]);
-	uv = float2(MyUVs[(data >>= 27) & 0x3]);
-	color = float4(packedData.y, packedData.y, packedData.y, 1.0);
-	textureIndex = asfloat(asuint(packedData.z));
-};
+	uint data = asuint(packedData.x);
+	// Unpack position using our new bit allocation: 11-10-11 bits
+	vertex = float4(data & 0x7FF, (data >> 11) & 0x3FF, (data >> 21) & 0x7FF, 1.0);
+	
+	// Unpack normal and uv indices
+	uint normalData = asuint(packedData.y);
+	uint normalIdx = normalData & 0x7;
+	uint uvIdx = (normalData >> 3) & 0x3;
+	
+	// Get height for color/shading
+	float height = float((normalData >> 5));
+	
+	normal = float3(MyNormals[normalIdx]);
+	uv = float2(MyUVs[uvIdx]);
+	color = float4(height, height, height, 1.0);
+	textureIndex = packedData.z;
+}
 
 #endif
 
