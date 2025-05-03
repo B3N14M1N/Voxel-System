@@ -35,7 +35,7 @@ namespace VoxelSystem.Generators
             {
                 for (int x = 1; x <= chunkWidth; x++)
                 {
-                    int y = (int)heightMap[GetMapIndex(x, z)].GetSolid();
+                    int y = heightMap[GetMapIndex(x, z)].GetSolid();
                     float3 voxelPos = new(x - 1, y, z - 1);
 
                     // Generate Top Face
@@ -49,7 +49,7 @@ namespace VoxelSystem.Generators
                     // Generate Side Faces using adjacent top face vertices
                     int neighborY;
 
-                    neighborY = (int)heightMap[GetMapIndex(x, z + 1)].GetSolid();
+                    neighborY = heightMap[GetMapIndex(x, z + 1)].GetSolid();
                     if (z == chunkWidth || neighborY < y)
                     {
                         int vB2 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z + 1));
@@ -57,7 +57,7 @@ namespace VoxelSystem.Generators
                         AddFace(vB3, vT3, vT2, vB2);
                     }
 
-                    neighborY = (int)heightMap[GetMapIndex(x, z - 1)].GetSolid();
+                    neighborY = heightMap[GetMapIndex(x, z - 1)].GetSolid();
                     if (z == 1 || neighborY < y)
                     {
                         int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));
@@ -65,7 +65,7 @@ namespace VoxelSystem.Generators
                         AddFace(vT0, vT1, vB1, vB0);
                     }
 
-                    neighborY = (int)heightMap[GetMapIndex(x + 1, z)].GetSolid();
+                    neighborY = heightMap[GetMapIndex(x + 1, z)].GetSolid();
                     if (x == chunkWidth || neighborY < y)
                     {
                         int vB1 = AddVertex(ref vertexMap, new float3(voxelPos.x + 1, neighborY, voxelPos.z));
@@ -73,7 +73,7 @@ namespace VoxelSystem.Generators
                         AddFace(vT1, vT3, vB3, vB1);
                     }
 
-                    neighborY = (int)heightMap[GetMapIndex(x - 1, z)].GetSolid();
+                    neighborY = heightMap[GetMapIndex(x - 1, z)].GetSolid();
                     if (x == 1 || neighborY < y)
                     {
                         int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));

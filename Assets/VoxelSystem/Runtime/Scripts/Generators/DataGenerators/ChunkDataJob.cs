@@ -116,10 +116,10 @@ namespace VoxelSystem.Generators
             float shapedHeight = math.pow(totalHeight, 1.0f + mountainInfluence * (steepnessExponent - 1.0f));
 
             int terrainHeight = (int)math.floor(shapedHeight * chunkHeight);
-            terrainHeight = math.clamp(terrainHeight, 1, chunkHeight);
+            terrainHeight = math.clamp(terrainHeight, 1, chunkHeight - 1);
 
             // --- Set HeightMap ---
-            HeightMap heightMap = new((byte)terrainHeight);
+            HeightMap heightMap = new(terrainHeight);
             heightMaps[index] = heightMap;
 
             // --- Voxel Placement ---

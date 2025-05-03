@@ -180,7 +180,7 @@ public class ChunkDataHandler : IDisposable
             return false;
         }
 
-        uint currentHeightValue = currentHeight.GetSolid();
+        int currentHeightValue = currentHeight.GetSolid();
 
         if (currentHeightValue <= 1 && !placeSolid)
         {
@@ -188,7 +188,7 @@ public class ChunkDataHandler : IDisposable
             return false;
         }
 
-        uint newSolidHeight = currentHeightValue + (uint)(placeSolid ? 1 : -1);
+        int newSolidHeight = currentHeightValue + (placeSolid ? 1 : -1);
 
         if (newSolidHeight > WorldSettings.ChunkHeight && !placeSolid)
         {
@@ -197,7 +197,7 @@ public class ChunkDataHandler : IDisposable
         }
 
         _voxels[voxelIndex] = voxel;
-        currentHeight.SetSolid((byte)newSolidHeight);
+        currentHeight.SetSolid(newSolidHeight);
         _heightMap[heightMapIndex] = currentHeight;
         IsDirty = true;
 
@@ -238,8 +238,8 @@ public class ChunkDataHandler : IDisposable
 
         int heightMapIndex = GetMapIndex(x, z);
         HeightMap currentHeightData = _heightMap[heightMapIndex];
-        uint currentSolidHeight = currentHeightData.GetSolid();
-        uint newSolidHeight = currentSolidHeight + (uint)(isRemoving ? -1 : 1);
+        int currentSolidHeight = currentHeightData.GetSolid();
+        int newSolidHeight = currentSolidHeight + (isRemoving ? -1 : 1);
 
         if (newSolidHeight > WorldSettings.ChunkHeight && isRemoving)
         {
@@ -247,7 +247,7 @@ public class ChunkDataHandler : IDisposable
             Debug.LogWarning($"Heightmap underflow detected during border update at ({x},{z}). Clamping height to 0.");
         }
 
-        HeightMap newHeight = new((byte)newSolidHeight);
+        HeightMap newHeight = new(newSolidHeight);
         _heightMap[heightMapIndex] = newHeight;
 
         IsDirty = true;

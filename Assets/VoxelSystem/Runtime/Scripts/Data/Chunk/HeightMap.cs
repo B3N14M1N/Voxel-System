@@ -8,13 +8,13 @@ namespace VoxelSystem.Data
     [Serializable]
     public struct HeightMap
     {
-        private byte _solid;
+        private int _solid;
 
         /// <summary>
         /// Creates a new height map entry with the specified solid height.
         /// </summary>
         /// <param name="solid">The height value</param>
-        public HeightMap(byte solid)
+        public HeightMap(int solid)
         {
             _solid = solid;
         }
@@ -23,7 +23,7 @@ namespace VoxelSystem.Data
         /// Sets the solid height value.
         /// </summary>
         /// <param name="height">The new height value</param>
-        public void SetSolid(byte height)
+        public void SetSolid(int height)
         {
             _solid = height;
         }
@@ -32,6 +32,6 @@ namespace VoxelSystem.Data
         /// Gets the solid height value.
         /// </summary>
         /// <returns>The current height value</returns>
-        public readonly byte GetSolid() => _solid;
+        public readonly int GetSolid() => _solid;
     };
 }
