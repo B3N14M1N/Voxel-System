@@ -124,11 +124,12 @@ namespace VoxelSystem.Generators
             {
                 for (int paddedZ = 1; paddedZ <= chunkWidth; paddedZ++)
                 {
+                    int index = GetMapIndex(paddedX, paddedZ);
                     int x = paddedX - 1;
                     int z = paddedZ - 1;
 
                     NativeArray<int> neighbourHeights = new(4, Allocator.Temp);
-                    int maxHeight = heightMaps[GetMapIndex(x, z)].GetSolid() - 1;
+                    int maxHeight = heightMaps[index].GetSolid() - 1;
                     int min = maxHeight;
 
                     for (int i = 0; i < 4; i++)
@@ -159,6 +160,8 @@ namespace VoxelSystem.Generators
                             AddFace(i, new(x, y, z), voxel);
                         }
                     }
+                    
+                    if (neighbourHeights.IsCreated) neighbourHeights.Dispose();
                 }
             }
         }
