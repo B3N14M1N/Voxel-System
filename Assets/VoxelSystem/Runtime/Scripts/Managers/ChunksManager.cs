@@ -361,11 +361,13 @@ namespace VoxelSystem.Managers
             meshVertices += mV;
             meshIndices += mI;
         }
+
         public void UpdateChunkColliderSize(int cV, int cI)
         {
             colliderVertices += cV;
             colliderIndices += cI;
         }
+
         public (int, int, int, int, int) ChunksMeshAndColliderSize()
         {
             return (_active.Count, meshVertices, meshIndices, colliderVertices, colliderIndices);
@@ -442,6 +444,39 @@ namespace VoxelSystem.Managers
             EditorUtility.UnloadUnusedAssetsImmediate();
             GC.Collect();
 #endif
+        }
+
+        /// <inheritdoc/>
+        public Voxel GetVoxel(int x, int y, int z)
+        {
+            return GetVoxel(new Vector3(x, y, z));
+        }
+
+        /// <inheritdoc/>
+        public Voxel GetVoxel(Vector3 worldPos)
+        {            
+            // --- Calculate Chunk Key using WorldSettings method ---
+            // WorldSettings.ChunkPositionFromPosition returns chunk coords (e.g., 0,0,0 or 1,0,0)
+            Vector3 chunkCoords = WorldSettings.ChunkPositionFromPosition(worldPos);
+            Vector3 chunkKey = chunkCoords;
+
+            // --- Calculate Local Coordinates ---
+            Vector3Int localPos = WorldToLocalCoords(worldPos);
+
+            // --- Get Chunk and Validate ---
+            Chunk targetChunk = GetChunk(chunkCoords);
+            if (targetChunk == null)
+            {
+                Debug.LogWarning($"GetVoxel failed: Chunk at key {chunkKey} (from world pos {worldPos}) not found.");
+                return Voxel.Empty;
+            }
+            if (!targetChunk.DataGenerated)
+            {
+                Debug.LogWarning($"GetVoxel failed: Chunk {chunkKey} exists but data not generated.");
+                return Voxel.Empty;
+            }
+
+            return targetChunk[worldPos];
         }
 
         ~ChunksManager()
