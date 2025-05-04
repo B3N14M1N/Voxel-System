@@ -137,6 +137,7 @@ namespace VoxelSystem.Generators
                 int3 face = (int3)FaceCheck[i];
                 int mapIndex = GetMapIndex(paddedX + face.x, paddedZ + face.z);
                 neighbourHeights[i] = heightMaps[mapIndex].GetSolid() - 1;
+                
                 if (neighbourHeights[i] < min)
                     min = neighbourHeights[i];
             }
@@ -144,6 +145,7 @@ namespace VoxelSystem.Generators
             for (int y = maxHeight; y >= min; y--)
             {
                 Voxel voxel = voxels[GetVoxelIndex(x, y, z)];
+
                 if (voxel.IsEmpty)
                     continue;
 
@@ -152,7 +154,7 @@ namespace VoxelSystem.Generators
                     if (!(y == chunkHeight && i == 4) || !(y == 0 && i == 5))
                     {
                         if ((i == 4 && y < maxHeight) || // skip top face if its not the top voxel
-                        (i < 4 && y <= neighbourHeights[i])) // skip side faces if it can't be seen by the player
+                            (i < 4 && y <= neighbourHeights[i])) // skip side faces if it can't be seen by the player
                             continue;
                     }
 

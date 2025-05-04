@@ -137,6 +137,7 @@ namespace VoxelSystem.Generators
                         int3 face = (int3)FaceCheck[i];
                         int mapIndex = GetMapIndex(paddedX + face.x, paddedZ + face.z);
                         neighbourHeights[i] = heightMaps[mapIndex].GetSolid() - 1;
+                        
                         if (neighbourHeights[i] < min)
                             min = neighbourHeights[i];
                     }
@@ -172,7 +173,6 @@ namespace VoxelSystem.Generators
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddFace(int faceIndex, float3 voxelPos, Voxel voxel)
         {
-
             int verts = meshData.vertsCount.Value;
             int tris = meshData.trisCount.Value;
             meshData.vertsCount.Value += 4;
