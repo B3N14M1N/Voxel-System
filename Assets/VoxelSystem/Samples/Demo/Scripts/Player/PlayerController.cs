@@ -19,7 +19,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 _velocity;
     private float _speedMultiplier = 1f;
     private float _zoom = -10f;
-    private float _previousZoom;
+    private float _previousZoom = -10f;
 
     [Header("Camera Settings")]
     [SerializeField] private Transform _cameraPivot;
