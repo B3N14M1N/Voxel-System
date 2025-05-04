@@ -77,7 +77,8 @@ public class ChunkViewHandler : IDisposable
             _meshRenderer = _chunkInstance.AddComponent<MeshRenderer>();
             _meshFilter = _chunkInstance.AddComponent<MeshFilter>();
             _meshCollider = _chunkInstance.AddComponent<MeshCollider>();
-
+            _chunkInstance.AddComponent<DrawRendererBounds>();
+            
             UpdateInstanceTransform(position);
             ApplyMaterial(ChunkFactory.Instance.Material);
             IsActive = false;

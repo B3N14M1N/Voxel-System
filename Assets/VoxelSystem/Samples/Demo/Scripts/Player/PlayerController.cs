@@ -1,22 +1,16 @@
 using UnityEngine;
-
-public enum PlayerState
-{
-    FPS,
-    TPS
-}
+using Zenject;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+    [Inject] private readonly PlayerStateManager _stateManager;
+
     [Header("Player Settings")]
     [SerializeField] private GameObject _characterMesh;
     [SerializeField] private GameObject _fpsDot;
-    [SerializeField] private PlayerState state = PlayerState.TPS;
-    [field: SerializeField] public bool CanControl { get; private set; } = true;
-    [field: SerializeField] public bool CanFly { get; private set; } = true;
-    [field: SerializeField] private KeyCode ToggleKey { get; set; } = KeyCode.C;
-    [field: SerializeField] private KeyCode FlyKey { get; set; } = KeyCode.F;
+    [SerializeField] private KeyCode _toggleViewKey = KeyCode.C;
+    [SerializeField] private KeyCode _toggleFlyKey = KeyCode.F;
     [field: SerializeField] public KeyCode JumpKey { get; private set; } = KeyCode.Space;
     [field: SerializeField] public KeyCode CrouchKey { get; private set; } = KeyCode.LeftControl;
 
@@ -49,7 +43,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _gravityMultiplier = 2f;
     [SerializeField] private float _groundCheckDistance = 0.1f;
     [SerializeField] private LayerMask _groundLayer = new() { value = 1 << 0 };
-
+    
     private void Start()
     {
         _characterController = GetComponent<CharacterController>();
@@ -60,12 +54,26 @@ public class PlayerController : MonoBehaviour
             _cameraTransform = Camera.main.transform;
             _cameraPivot = _cameraTransform.parent;
         }
-        ToggleCursor(state == PlayerState.FPS);
+        
+        // Update UI based on initial state
+        UpdateViewState(_stateManager.ViewState);
+        
+        // Subscribe to state changes
+        _stateManager.OnViewStateChanged += UpdateViewState;
+    }
+    
+    private void OnDestroy()
+    {
+        // Unsubscribe to prevent memory leaks
+        if (_stateManager != null)
+        {
+            _stateManager.OnViewStateChanged -= UpdateViewState;
+        }
     }
 
     private void Update()
     {
-        if (!CanControl) return;
+        if (!_stateManager.CanControl) return;
 
         HandleInput();
         HandleMovement();
@@ -74,14 +82,14 @@ public class PlayerController : MonoBehaviour
 
     private void HandleInput()
     {
-        if (Input.GetKeyDown(ToggleKey)) ToggleState();
-        if (Input.GetKeyDown(FlyKey)) CanFly = !CanFly;
+        if (Input.GetKeyDown(_toggleViewKey)) _stateManager.ToggleViewState();
+        if (Input.GetKeyDown(_toggleFlyKey)) _stateManager.ToggleFlyState();
     }
 
     private void HandleMovement()
     {
         Vector3 direction = GetMovementInput().normalized;
-        if (state == PlayerState.TPS && direction != Vector3.zero)
+        if (_stateManager.ViewState == PlayerState.TPS && direction != Vector3.zero)
         {
             direction = AdjustDirectionToCamera(direction);
             transform.forward = direction;
@@ -95,12 +103,13 @@ public class PlayerController : MonoBehaviour
         _animator.SetBool("Speed", direction != Vector3.zero);
         _animator.SetFloat("SpeedMultiplier", _speedMultiplier);
 
-        float moveSpeed = CanFly ? _flySpeed : _walkSpeed;
+        float moveSpeed = _stateManager.CanFly ? _flySpeed : _walkSpeed;
         _characterController.Move(moveSpeed * _speedMultiplier * Time.deltaTime * direction);
 
-        if (!CanFly) ApplyGravity();
+        if (!_stateManager.CanFly) ApplyGravity();
         else HandleFlight();
     }
+    
     private void ApplyGravity()
     {
         Vector3 groundCheckOrigin = transform.position + Vector3.up * 0.1f; // Start slightly above the feet
@@ -125,7 +134,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleCamera()
     {
-        if (state == PlayerState.FPS || (state == PlayerState.TPS && Input.GetMouseButton(1)))
+        if (_stateManager.ViewState == PlayerState.FPS || (_stateManager.ViewState == PlayerState.TPS && Input.GetMouseButton(1)))
         {
             _yRotation += Input.GetAxisRaw("Mouse X") * _lookSensitivity;
             _xRotation -= Input.GetAxisRaw("Mouse Y") * _lookSensitivity;
@@ -133,13 +142,13 @@ public class PlayerController : MonoBehaviour
         }
         _cameraPivot.rotation = Quaternion.Euler(_xRotation, _yRotation, 0);
 
-        if (state == PlayerState.FPS)
+        if (_stateManager.ViewState == PlayerState.FPS)
         {
             transform.rotation = Quaternion.Euler(0, _yRotation, 0);
             _cameraPivot.position = transform.position + 0.9f * _characterController.height * Vector3.up;
             _cameraTransform.localPosition = new Vector3(0, 0, 0); // Reset _zoom
         }
-        else if (state == PlayerState.TPS)
+        else if (_stateManager.ViewState == PlayerState.TPS)
         {
             float targetHeight = transform.position.y + _characterController.height * 0.5f;
             float smoothHeight = Mathf.Clamp(_cameraPivot.position.y, targetHeight + _cameraYOffset.x, targetHeight + _cameraYOffset.y);
@@ -148,6 +157,7 @@ public class PlayerController : MonoBehaviour
             _cameraTransform.localPosition = new Vector3(0, 0, _zoom);
         }
     }
+    
     private Vector3 GetMovementInput()
     {
         Vector3 input = Vector3.zero;
@@ -172,29 +182,27 @@ public class PlayerController : MonoBehaviour
         else _speedMultiplier = 1f;
     }
 
-    private void ToggleState()
+    private void UpdateViewState(PlayerState state)
     {
         if (state == PlayerState.TPS)
         {
-            _previousZoom = _zoom;
-            _zoom = 0;
-            state = PlayerState.FPS;
-            ToggleCursor(true); // Lock cursor in FPS mode
+            _zoom = _previousZoom;
+            ToggleCursor(false); // Unlock cursor in TPS mode
         }
         else
         {
-            _zoom = _previousZoom;
-            state = PlayerState.TPS;
-            ToggleCursor(false); // Unlock cursor in TPS mode
+            _previousZoom = _zoom;
+            _zoom = 0;
+            ToggleCursor(true); // Lock cursor in FPS mode
         }
+        
         _characterMesh.SetActive(state == PlayerState.TPS);
+        if (_fpsDot != null) _fpsDot.SetActive(state == PlayerState.FPS);
     }
 
     private void ToggleCursor(bool isLocked)
     {
         Cursor.lockState = isLocked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !isLocked;
-
-        if(_fpsDot != null) _fpsDot.SetActive(isLocked);
     }
 }

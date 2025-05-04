@@ -17,6 +17,7 @@ public class GameInstaller : MonoInstaller
         var map = _blocks.GenerateAtlas();
         ChunkMeshGenerator.SetAtlasIndexMap(map);
         var chunksManager = new ChunksManager(_chunkLayerMask, _chunksParent);
+        Container.BindInterfacesAndSelfTo<PlayerStateManager>().AsSingle();
         Container.Bind<BlocksCatalogue>().FromInstance(_blocks).AsSingle();
         Container.Bind<IChunksManager>().FromInstance(chunksManager).AsSingle();
         Container.Bind<VoxelBlockManager>().FromInstance(_blockManager).AsSingle();

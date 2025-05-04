@@ -1,25 +1,32 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using Zenject;
 
 [Serializable]
 public class MenuManagerGUI : MonoBehaviour
 {
+    [Inject] private readonly PlayerStateManager _stateManager;
 
     [Header("Screen")]
-    public KeyCode screenWindowKeyCode = KeyCode.F11;
+    [field: SerializeField] private KeyCode screenWindowKeyCode { get; set; } = KeyCode.F11;
     [Header("Stats")]
-    public KeyCode statsKeyCode = KeyCode.F3;
-    public GameObject StatsPannel;
+    [field: SerializeField] private KeyCode statsKeyCode { get; set; } = KeyCode.F3;
+    [field: SerializeField] private GameObject StatsPannel { get; set; }
 
     [Header("Menu")]
-    public KeyCode MenyKeyCode = KeyCode.Escape;
-    public GameObject MenuPannel;
+    [field: SerializeField] private KeyCode MenyKeyCode { get; set; } = KeyCode.Escape;
+    [field: SerializeField] private GameObject MenuPannel { get; set; }
+    [field: SerializeField] private GameObject BlockSelectorPannel { get; set; }
+
+    private bool isCursorVisible = true;
+    private bool isCursorLocked = false;
     public void Start()
     {
-        //Cursor.visible = false;
-        Cursor.visible = true;
+        Cursor.visible = isCursorVisible;
+        Cursor.lockState = isCursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
     }
+
     public void Update()
     {
         if (Input.GetKeyDown(statsKeyCode))
@@ -29,14 +36,36 @@ public class MenuManagerGUI : MonoBehaviour
 
         if (Input.GetKeyDown(MenyKeyCode))
         {
-            MenuPannel.SetActive(!MenuPannel.activeSelf);
+            UpdateSettingsPannel();
         }
+
         if (Input.GetKeyDown(screenWindowKeyCode))
         {
             Screen.fullScreen = !Screen.fullScreen;
         }
     }
 
+    public void UpdateSettingsPannel()
+    {
+        bool isActivating = !MenuPannel.activeSelf;
+
+        if (isActivating)
+        {
+            isCursorVisible = Cursor.visible;
+            isCursorLocked = Cursor.lockState == CursorLockMode.Locked;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = isCursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = isCursorVisible;
+        }
+        
+        _stateManager.SetControlState(!isActivating);
+        BlockSelectorPannel.SetActive(!isActivating);
+        MenuPannel.SetActive(isActivating);
+    }
     public void Quit()
     {
 #if UNITY_EDITOR
