@@ -2,6 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 using Zenject;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Managers
 {

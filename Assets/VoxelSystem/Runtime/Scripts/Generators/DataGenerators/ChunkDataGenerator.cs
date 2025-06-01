@@ -8,6 +8,7 @@ using VoxelSystem.Data;
 using Unity.Mathematics;
 using Unity.Jobs;
 using VoxelSystem.Settings.Generation;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Generators
 {
@@ -154,6 +155,9 @@ namespace VoxelSystem.Generators
                 jobHandle.Complete();
 
                 Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+                if (GenerationData == null)
+                    Debug.LogWarning($"ChunkDataGenerator: GenerationData is null.");
+
                 if (chunk != null)
                 {
                     chunk.UploadData(ref Voxels, ref HeightMap);
@@ -161,7 +165,8 @@ namespace VoxelSystem.Generators
                 else
                 {
                     Dispose(true);
-                    return null;
+                    GenerationData.flags = ChunkGenerationFlags.Disposed;
+                    return GenerationData;
                 }
 
                 GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;

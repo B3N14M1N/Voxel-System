@@ -1,13 +1,12 @@
-using System;
-using Unity.Burst;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 using VoxelSystem.Data;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Generators
 {
@@ -218,7 +217,11 @@ namespace VoxelSystem.Generators
             if (IsComplete)
             {
                 jobHandle.Complete();
+
                 Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+                if (GenerationData == null)
+                    Debug.LogWarning($"ChunkMeshGenerator: GenerationData is null.");
+
                 if (chunk != null)
                 {
                     var mesh = meshData.GenerateMesh();
@@ -227,8 +230,10 @@ namespace VoxelSystem.Generators
                 else
                 {
                     Dispose();
-                    return null;
+                    GenerationData.flags = ChunkGenerationFlags.Disposed;
+                    return GenerationData;
                 }
+                
                 GenerationData.flags &= ChunkGenerationFlags.Data | ChunkGenerationFlags.Collider;
                 Dispose();
             }

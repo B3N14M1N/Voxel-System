@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using VoxelSystem.Factory;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 
 /// <summary>
 /// Manages the visual representation of a chunk in the game world, handling its GameObject, mesh, and collider.

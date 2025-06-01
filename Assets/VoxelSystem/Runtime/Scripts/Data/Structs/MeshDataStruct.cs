@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Rendering;
 using UnityEngine;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Data.Structs
 {

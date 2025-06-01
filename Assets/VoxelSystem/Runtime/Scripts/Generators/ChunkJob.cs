@@ -61,6 +61,7 @@ public class ChunkJob
         else
         {
             _chunk = _chunksManager?.GetChunk(GenerationData.position);
+
             if (_chunk != null)
             {
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
@@ -95,26 +96,30 @@ public class ChunkJob
     /// <returns>True if all requested generation is complete</returns>
     public bool Complete()
     {
+
         if (_dataScheduled && _chunkDataGenerator.IsComplete)
         {
-            _dataScheduled = true; // Original code had this redundant assignment
+            _dataScheduled = true;
             _dataScheduled = false;
             GenerationData = _chunkDataGenerator.Complete();
 
-            if (GenerationData.flags == ChunkGenerationFlags.None)
+            if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
             {
-                _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                if (GenerationData.flags != ChunkGenerationFlags.Disposed)
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
                 _completed = true;
                 Dispose();
                 Processed -= 1;
             }
             else
             {
+
                 if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
                 {
                     _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
                     _colliderScheduled = true;
                 }
+
                 if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
                 {
                     _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
@@ -130,11 +135,13 @@ public class ChunkJob
             _colliderScheduled = false;
             GenerationData = _chunkColliderGenerator.Complete();
 
-            if (GenerationData.flags == ChunkGenerationFlags.None)
+            if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
             {
-                _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                if (GenerationData.flags != ChunkGenerationFlags.Disposed)
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
                 _completed = true;
                 Dispose();
+
                 if (_regenerating == false)
                     Processed -= 1;
             }
@@ -147,11 +154,13 @@ public class ChunkJob
             _meshScheduled = false;
             GenerationData = _chunkMeshGenerator.Complete();
 
-            if (GenerationData.flags == ChunkGenerationFlags.None)
+            if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
             {
-                _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                if (GenerationData.flags != ChunkGenerationFlags.Disposed)
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
                 _completed = true;
                 Dispose();
+
                 if (_regenerating == false)
                     Processed -= 1;
             }

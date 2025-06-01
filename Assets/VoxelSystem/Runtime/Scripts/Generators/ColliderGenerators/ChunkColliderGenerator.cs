@@ -1,9 +1,11 @@
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 using VoxelSystem.Data;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Generators
 {
@@ -66,6 +68,9 @@ namespace VoxelSystem.Generators
             {
                 jobHandle.Complete();
                 Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+                if (GenerationData == null)
+                    Debug.LogWarning($"ChunkColliderGenerator: GenerationData is null.");
+                    
                 if (chunk != null)
                 {
                     var collider = colliderData.GenerateMesh();
@@ -74,7 +79,8 @@ namespace VoxelSystem.Generators
                 else
                 {
                     Dispose();
-                    return null;
+                    GenerationData.flags = ChunkGenerationFlags.Disposed;
+                    return GenerationData;
                 }
                 Dispose();
                 GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Data;

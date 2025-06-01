@@ -28,20 +28,25 @@ namespace VoxelSystem.Data.GenerationFlags
         /// No generation needed.
         /// </summary>
         None = 0,
-        
+
         /// <summary>
         /// Generate voxel data.
         /// </summary>
         Data = 1,
-        
+
         /// <summary>
         /// Generate collider mesh.
         /// </summary>
         Collider = 2,
-        
+
         /// <summary>
         /// Generate visual mesh.
         /// </summary>
         Mesh = 4,
+        
+        /// <summary>
+        /// Indicates that the chunk is being disposed of.
+        /// </summary>
+        Disposed = 8
     };
 }

@@ -128,6 +128,7 @@ namespace VoxelSystem.Factory
                 _chunksToProccess.RemoveAt(i);
                 i--;
             }
+            Debug.Log($"Chunks processed: {ChunkJob.Processed}");
             _time = 0f;
         }
 

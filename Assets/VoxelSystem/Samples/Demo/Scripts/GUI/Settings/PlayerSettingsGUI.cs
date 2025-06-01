@@ -4,6 +4,7 @@ using UnityEngine;
 using Zenject;
 using VoxelSystem.Managers;
 using VoxelSystem.Generators;
+using VoxelSystem.Settings;
 public class PlayerSettingsGUI : MonoBehaviour, ISettings
 {
     [Inject] private readonly IChunksManager _chunksManager;
@@ -73,7 +74,8 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         PlayerSettings.TimeToLoadNextChunks = valueFloat >= 0 ? valueFloat : PlayerSettings.TimeToLoadNextChunks;
         PlayerSettings.MeshGeneratorType = (MeshGeneratorType)MeshGeneratorTypeDropdown.value;
 
-        _chunksManager.GenerateChunksPositionsCheck();
+        WorldSettings.NotifySettingsChanged();
+
         Load();
 
         if (!PrintDebug) return;

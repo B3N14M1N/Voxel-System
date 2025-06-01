@@ -2,6 +2,7 @@ using System;
 using Unity.Collections;
 using UnityEngine;
 using VoxelSystem.Data;
+using VoxelSystem.Settings;
 
 /// <summary>
 /// Manages the voxel and height map data for a chunk, handling operations to access and modify the data.

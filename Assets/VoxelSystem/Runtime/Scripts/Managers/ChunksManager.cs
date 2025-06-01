@@ -8,6 +8,7 @@ using UnityEngine;
 using VoxelSystem.Data;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Managers
 {
@@ -17,8 +18,8 @@ namespace VoxelSystem.Managers
     public class ChunksManager : IChunksManager
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
-        
+        private CancellationTokenSource _cancellationTokenSource = new();
+
         /// <summary>
         /// Gets the center position around which chunks are generated.
         /// </summary>
@@ -33,7 +34,7 @@ namespace VoxelSystem.Managers
         private Dictionary<Vector3, Chunk> _cached = new();
         private Dictionary<Vector3, Chunk> _generating = new();
         private Vector3[] _chunksPositionCheck;
-        
+
         /// <summary>
         /// Creates a new chunk instance or retrieves one from the pool.
         /// </summary>
@@ -45,7 +46,7 @@ namespace VoxelSystem.Managers
                 {
                     Active = false
                 };
-                
+
                 return chunk;
             }
         }
@@ -64,6 +65,10 @@ namespace VoxelSystem.Managers
                 _pool.Enqueue(NewChunk);
             }
 
+            WorldSettings.OnWorldSettingsChanged += GenerateChunksPositionsCheck;
+            WorldSettings.OnWorldChanged += Dispose;
+            WorldSettings.OnWorldChanged += GenerateChunksPositionsCheck;
+
             GenerateChunksPositionsCheck();
         }
 
@@ -75,6 +80,9 @@ namespace VoxelSystem.Managers
             var job = new ChunksRenderView(Vector3.zero, PlayerSettings.RenderDistance);
             _chunksPositionCheck = job.Complete();
             job.Dispose();
+
+            // Reinitialize the chunks with the new positions
+            UpdateChunks(Center);
         }
 
         /// <summary>
@@ -101,8 +109,6 @@ namespace VoxelSystem.Managers
                     position = key,
                     flags = ChunkGenerationFlags.Data | ChunkGenerationFlags.Collider | ChunkGenerationFlags.Mesh,
                 };
-
-                //bool simulate = _chunksPositionCheck[i].y <= PlayerSettings.SimulateDistance * PlayerSettings.SimulateDistance;
 
                 if (_cached.TryGetValue(key, out Chunk chunk))
                 {
@@ -216,14 +222,26 @@ namespace VoxelSystem.Managers
         }
 
         /// <summary>
-        /// Marks a generating chunk as complete and moves it to the active collection.
+        /// Marks a generating chunk as complete and moves it to the active or cached collection.
         /// </summary>
         /// <param name="pos">The position of the chunk</param>
         public void CompleteGeneratingChunk(Vector3 pos)
         {
             if (_generating.TryGetValue(pos, out Chunk chunk))
             {
-                _active.Add(pos, chunk);
+                if (WorldSettings.ChunksInRange(Center, pos, PlayerSettings.RenderDistance))
+                {
+                    chunk.Active = true;
+                    chunk.Render = true;
+                    _active.Add(pos, chunk);
+                }
+                else
+                {
+                    chunk.Active = false;
+                    chunk.Render = false;
+                    _cached.Add(pos, chunk);
+                }
+
                 _generating.Remove(pos);
             }
         }
@@ -387,7 +405,6 @@ namespace VoxelSystem.Managers
             {
                 _chunksToClear.Enqueue(_cached[key]);
                 _cached.Remove(key);
-                //ClearChunkAndEnqueue(key, ref _cached);
             }
 
             foreach (var key in _cached.Keys)
@@ -410,6 +427,8 @@ namespace VoxelSystem.Managers
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
+            _cancellationTokenSource = new CancellationTokenSource();
+
             while (_pool.Count > 0)
             {
                 _pool.Dequeue().Dispose();
@@ -454,7 +473,7 @@ namespace VoxelSystem.Managers
 
         /// <inheritdoc/>
         public Voxel GetVoxel(Vector3 worldPos)
-        {            
+        {
             // --- Calculate Chunk Key using WorldSettings method ---
             // WorldSettings.ChunkPositionFromPosition returns chunk coords (e.g., 0,0,0 or 1,0,0)
             Vector3 chunkCoords = WorldSettings.ChunkPositionFromPosition(worldPos);
@@ -481,6 +500,9 @@ namespace VoxelSystem.Managers
 
         ~ChunksManager()
         {
+            WorldSettings.OnWorldSettingsChanged -= GenerateChunksPositionsCheck;
+            WorldSettings.OnWorldChanged -= Dispose;
+            WorldSettings.OnWorldChanged -= GenerateChunksPositionsCheck;
             Dispose();
         }
     }
