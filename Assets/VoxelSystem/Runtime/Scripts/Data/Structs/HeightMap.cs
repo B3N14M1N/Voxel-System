@@ -1,6 +1,6 @@
 using System;
 
-namespace VoxelSystem.Data
+namespace VoxelSystem.Data.Structs
 {
     /// <summary>
     /// Represents height data for a specific column in a chunk.

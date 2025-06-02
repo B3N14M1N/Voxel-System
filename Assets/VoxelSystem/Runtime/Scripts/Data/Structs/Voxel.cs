@@ -1,19 +1,7 @@
 using System;
 
-namespace VoxelSystem.Data
+namespace VoxelSystem.Data.Structs
 {
-    /// <summary>
-    /// Defines the available types of voxels in the system.
-    /// </summary>
-    public enum VoxelType
-    {
-        air = 0,
-        grass = 1,
-        dirt = 2,
-        stone = 3,
-        sand = 4,
-    }
-
     /// <summary>
     /// Represents a single voxel element with type information.
     /// </summary>
@@ -61,14 +49,14 @@ namespace VoxelSystem.Data
         /// </summary>
         /// <param name="other">The other voxel to compare with</param>
         /// <returns>True if the voxels are equal, false otherwise</returns>
-        public bool Equals(Voxel other) => _type == other._type;
+        public readonly bool Equals(Voxel other) => _type == other._type;
 
         /// <summary>
         /// Compares this voxel with another voxel for ordering.
         /// </summary>
         /// <param name="other">The other voxel to compare with</param>
         /// <returns>An integer indicating the relative order of the voxels</returns>
-        public int CompareTo(Voxel other) => _type.CompareTo(other._type);
+        public readonly int CompareTo(Voxel other) => _type.CompareTo(other._type);
 
     };
 }

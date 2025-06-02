@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using VoxelSystem.Data;
 using VoxelSystem.Data.Blocks;
+using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
 using Zenject;
 

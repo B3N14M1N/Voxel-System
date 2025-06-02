@@ -1,5 +1,6 @@
 using UnityEngine;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Chunk;
+using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Managers
 {

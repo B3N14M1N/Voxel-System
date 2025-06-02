@@ -3,19 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using UnityEditor;
 using UnityEngine;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.GenerationFlags;
+using VoxelSystem.Data.Structs;
 using VoxelSystem.Factory;
+using VoxelSystem.Generators;
 using VoxelSystem.Settings;
+using VoxelSystem.Utils;
 
 namespace VoxelSystem.Managers
 {
     /// <summary>
     /// Manages chunk lifecycle, including creation, updating, and caching based on player position.
     /// </summary>
-    public class ChunksManager : IChunksManager
+    public class ChunksManager : IChunksManager, IDisposable
     {
         public const string ChunksManagerLoopString = "ChunksManagerLoop";
         private CancellationTokenSource _cancellationTokenSource = new();
@@ -460,7 +462,7 @@ namespace VoxelSystem.Managers
             _generating.Clear();
 
 #if UNITY_EDITOR
-            EditorUtility.UnloadUnusedAssetsImmediate();
+            UnityEditor.EditorUtility.UnloadUnusedAssetsImmediate();
             GC.Collect();
 #endif
         }

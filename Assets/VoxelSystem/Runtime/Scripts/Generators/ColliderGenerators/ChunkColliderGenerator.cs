@@ -1,7 +1,8 @@
+using System;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
@@ -12,7 +13,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Generates simplified collision meshes for chunks based on height map data.
     /// </summary>
-    public class ChunkColliderGenerator
+    public class ChunkColliderGenerator: IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.

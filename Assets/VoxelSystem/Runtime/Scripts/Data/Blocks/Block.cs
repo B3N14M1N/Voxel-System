@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Data.Blocks
 {

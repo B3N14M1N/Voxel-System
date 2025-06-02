@@ -1,11 +1,14 @@
 using UnityEngine;
 using System.IO;
 using System;
-using NUnit.Framework;
 using VoxelSystem.Factory;
 
 namespace VoxelSystem.Settings
 {
+    /// <summary>
+    /// Manages the settings for the voxel world, including world path, chunk dimensions, and seed.
+    /// This class also handles saving and loading world settings to a file.
+    /// </summary>
     public class WorldSettings
     {
         public static WorldSettings Instance { get; private set; }
@@ -117,7 +120,7 @@ namespace VoxelSystem.Settings
             string settingsPath = Path.Combine(PersistentWorldPath, "settings.txt");
             string settingsContent = $"Seed={Seed}\nChunkWidth={ChunkWidth}\nChunkHeight={ChunkHeight}";
             File.WriteAllText(settingsPath, settingsContent);
-            if(HasDebugging)
+            if (HasDebugging)
                 Debug.Log($"World settings saved: {settingsPath}");
         }
 

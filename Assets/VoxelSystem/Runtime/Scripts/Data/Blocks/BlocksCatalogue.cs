@@ -50,6 +50,7 @@ namespace VoxelSystem.Data.Blocks
             NativeParallelHashMap<int, int> textureMapping = new(Blocks.Count, Allocator.Persistent);
 
             var placeholder = CreateBlankTexture(textureSize);
+
             for (int i = 0; i < blockCount; i++)
             {
                 Block block = Blocks[i];
@@ -63,15 +64,14 @@ namespace VoxelSystem.Data.Blocks
             }
 
             textureArray.Apply();
+
             foreach (var material in Materials)
             {
                 material.SetTexture("_Texture2D_Array", textureArray);
             }
 
             SaveAtlas(textureArray);
-
             TextureMapping = textureMapping;
-
             return textureMapping;
         }
 
@@ -127,11 +127,14 @@ namespace VoxelSystem.Data.Blocks
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
+
             Color32[] pixels = new Color32[size * size];
+
             for (int i = 0; i < pixels.Length; i++)
             {
                 pixels[i] = new Color32(0, 0, 0, 0);
             }
+
             blankTexture.SetPixels32(pixels);
             blankTexture.Apply();
             return blankTexture;
@@ -173,6 +176,7 @@ namespace VoxelSystem.Data.Blocks
         public void Dispose()
         {
             Debug.Log("[Blocks Catalogue] Disposing of Texture Mapping");
+            
             if (TextureMapping.IsCreated) TextureMapping.Dispose();
         }
     }

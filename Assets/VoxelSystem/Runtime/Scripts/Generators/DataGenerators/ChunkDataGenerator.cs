@@ -4,11 +4,12 @@ using UnityEngine;
 using VoxelSystem.Managers;
 using VoxelSystem.Data.GenerationFlags;
 using Unity.Collections;
-using VoxelSystem.Data;
 using Unity.Mathematics;
 using Unity.Jobs;
 using VoxelSystem.Settings.Generation;
 using VoxelSystem.Settings;
+using VoxelSystem.Data.Structs;
+using VoxelSystem.Data.Chunk;
 
 namespace VoxelSystem.Generators
 {

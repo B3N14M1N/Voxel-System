@@ -12,7 +12,7 @@ namespace VoxelSystem.Data.Structs
     /// Represents mesh data using native arrays for efficient processing in jobs.
     /// </summary>
     [Serializable]
-    public struct MeshDataStruct
+    public struct MeshDataStruct: IDisposable
     {
         /// <summary>
         /// The vertices of the mesh.

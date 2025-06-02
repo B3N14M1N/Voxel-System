@@ -1,11 +1,10 @@
-/* ChunkDataJob.cs */
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using VoxelSystem.Data;
 using VoxelSystem.Settings.Generation;
 using System.Runtime.CompilerServices;
+using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Generators
 {
@@ -130,8 +129,6 @@ namespace VoxelSystem.Generators
             Voxel stone = new((byte)VoxelType.stone);
             Voxel sand = new((byte)VoxelType.sand);
             Voxel air = Voxel.Empty;
-
-
 
             for (int y = 0; y < chunkHeight; y++)
             {

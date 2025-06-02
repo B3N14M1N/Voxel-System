@@ -11,7 +11,7 @@ namespace VoxelSystem.Data.GenerationFlags
         /// The position of the chunk to generate.
         /// </summary>
         public Vector3 position;
-        
+
         /// <summary>
         /// Flags indicating which aspects of the chunk to generate.
         /// </summary>
@@ -43,7 +43,7 @@ namespace VoxelSystem.Data.GenerationFlags
         /// Generate visual mesh.
         /// </summary>
         Mesh = 4,
-        
+
         /// <summary>
         /// Indicates that the chunk is being disposed of.
         /// </summary>

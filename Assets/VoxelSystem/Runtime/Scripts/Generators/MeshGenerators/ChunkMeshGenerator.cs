@@ -1,8 +1,9 @@
+using System;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
@@ -29,7 +30,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Generates a chunk mesh using a single-threaded approach with Unity's job system and Burst compilation.
     /// </summary>
-    public class ChunkMeshGenerator : IChunkMeshGenerator
+    public class ChunkMeshGenerator : IChunkMeshGenerator, IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
