@@ -95,6 +95,7 @@ namespace VoxelSystem.Generators
             for (int i = 0; i < noiseLayers.Length; i++)
             {
                 NoiseLayerParametersJob layer = noiseLayers[i];
+
                 if (!layer.enabled) continue;
 
                 float noiseValue = GetNormalizedNoise(worldX, worldZ, layer.noise);
@@ -124,6 +125,7 @@ namespace VoxelSystem.Generators
             // --- Voxel Placement ---
 
             if (!(paddedX >= 1 && paddedZ >= 1 && paddedX <= chunkWidth && paddedZ <= chunkWidth)) return;
+
             Voxel grass = new((byte)VoxelType.grass);
             Voxel dirt = new((byte)VoxelType.dirt);
             Voxel stone = new((byte)VoxelType.stone);
@@ -153,6 +155,7 @@ namespace VoxelSystem.Generators
                 {
                     if (y >= terrainHeight - dirtDepth)
                         voxelToPlace = dirt;
+
                     if (y == terrainHeight - 1)
                         voxelToPlace = grass;
                 }
@@ -194,6 +197,7 @@ namespace VoxelSystem.Generators
             }
 
             if (maxValue <= 0) return 0.5f;
+            
             return (total / maxValue + 1.0f) * 0.5f;
         }
 

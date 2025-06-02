@@ -84,10 +84,12 @@ namespace VoxelSystem.Generators
 
             // 2. Noise Layer Parameters (convert to job-safe struct)
             var layers = new List<NoiseLayerParametersJob>();
+
             if (generationParams.ContinentalNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.ContinentalNoise));
             if (generationParams.MountainNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.MountainNoise));
             if (generationParams.HillNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.HillNoise));
             if (generationParams.DetailNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.DetailNoise));
+
             noiseLayers = new NativeArray<NoiseLayerParametersJob>(layers.ToArray(), Allocator.Persistent);
 
             // 3. Allocate Voxel and HeightMap Arrays
@@ -151,29 +153,28 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (IsComplete)
+            if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+
+            jobHandle.Complete();
+
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+
+            if (GenerationData == null)
+                Debug.LogWarning($"ChunkDataGenerator: GenerationData is null.");
+
+            if (chunk != null)
             {
-                jobHandle.Complete();
-
-                Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
-                if (GenerationData == null)
-                    Debug.LogWarning($"ChunkDataGenerator: GenerationData is null.");
-
-                if (chunk != null)
-                {
-                    chunk.UploadData(ref Voxels, ref HeightMap);
-                }
-                else
-                {
-                    Dispose(true);
-                    GenerationData.flags = ChunkGenerationFlags.Disposed;
-                    return GenerationData;
-                }
-
-                GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;
-                Dispose();
+                chunk.UploadData(ref Voxels, ref HeightMap);
+            }
+            else
+            {
+                Dispose(true);
+                GenerationData.flags = ChunkGenerationFlags.Disposed;
                 return GenerationData;
             }
+
+            GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;
+            Dispose();
             return GenerationData;
         }
 

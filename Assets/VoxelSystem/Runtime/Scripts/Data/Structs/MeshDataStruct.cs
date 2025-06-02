@@ -69,6 +69,7 @@ namespace VoxelSystem.Data.Structs
         public void Dispose()
         {
             Initialized = false;
+            
             if (vertices.IsCreated) vertices.Dispose();
             if (indices.IsCreated) indices.Dispose();
             if (vertsCount.IsCreated) vertsCount.Dispose();

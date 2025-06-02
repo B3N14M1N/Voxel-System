@@ -182,6 +182,7 @@ namespace VoxelSystem.Generators
             {
                 meshData.vertices[verts + j] = PackVertexData(Vertices[FaceVerticeIndex[faceIndex * 4 + j]] + voxelPos, faceIndex, j, (int)voxelPos.y, atlasIndex);
             }
+            
             for (int k = 0; k < 6; k++)
             {
                 meshData.indices[tris + k] = verts + FaceIndices[k];

@@ -100,6 +100,7 @@ namespace VoxelSystem.Data.Chunk
         public void UpdateInstanceTransform(Vector3 position)
         {
             if (!IsInstantiated) return;
+
             _chunkInstance.name = $"Chunk Instance [{(int)position.x}]:[{(int)position.z}]";
             _chunkInstance.transform.position = new Vector3(position.x, 0, position.z) * WorldSettings.ChunkWidth;
         }
@@ -189,6 +190,7 @@ namespace VoxelSystem.Data.Chunk
                 _chunkInstance.name = "Chunk Instance [_pool]";
                 IsActive = false;
             }
+
             ClearMeshAndCollider();
         }
 
@@ -198,11 +200,13 @@ namespace VoxelSystem.Data.Chunk
         public void Dispose()
         {
             ClearMeshAndCollider();
+
             if (IsInstantiated)
             {
                 GameObject.Destroy(_chunkInstance);
                 _chunkInstance = null;
             }
+
             _meshFilter = null;
             _meshRenderer = null;
             _meshCollider = null;
@@ -217,13 +221,12 @@ namespace VoxelSystem.Data.Chunk
         private int GetLayerIndex(LayerMask layerMask)
         {
             int layerValue = layerMask.value;
+
             for (int i = 0; i < 32; i++)
             {
-                if ((layerValue & (1 << i)) != 0)
-                {
-                    return i;
-                }
+                if ((layerValue & (1 << i)) != 0) return i;
             }
+
             return -1;
         }
 
@@ -235,6 +238,7 @@ namespace VoxelSystem.Data.Chunk
         {
             if (!IsInstantiated) return false;
             if (_meshFilter == null) _chunkInstance.TryGetComponent(out _meshFilter);
+
             return _meshFilter != null;
         }
 
@@ -246,6 +250,7 @@ namespace VoxelSystem.Data.Chunk
         {
             if (!IsInstantiated) return false;
             if (_meshRenderer == null) _chunkInstance.TryGetComponent(out _meshRenderer);
+
             return _meshRenderer != null;
         }
 
@@ -257,6 +262,7 @@ namespace VoxelSystem.Data.Chunk
         {
             if (!IsInstantiated) return false;
             if (_meshCollider == null) _chunkInstance.TryGetComponent(out _meshCollider);
+            
             return _meshCollider != null;
         }
     }

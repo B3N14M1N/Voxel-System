@@ -13,7 +13,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Generates simplified collision meshes for chunks based on height map data.
     /// </summary>
-    public class ChunkColliderGenerator: IDisposable
+    public class ChunkColliderGenerator : IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
@@ -65,27 +65,29 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (IsComplete)
+            if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+
+            jobHandle.Complete();
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+
+            if (GenerationData == null)
+                Debug.LogWarning($"ChunkColliderGenerator: GenerationData is null.");
+
+            if (chunk != null)
             {
-                jobHandle.Complete();
-                Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
-                if (GenerationData == null)
-                    Debug.LogWarning($"ChunkColliderGenerator: GenerationData is null.");
-                    
-                if (chunk != null)
-                {
-                    var collider = colliderData.GenerateMesh();
-                    chunk.UploadCollider(collider);
-                }
-                else
-                {
-                    Dispose();
-                    GenerationData.flags = ChunkGenerationFlags.Disposed;
-                    return GenerationData;
-                }
-                Dispose();
-                GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Data;
+                var collider = colliderData.GenerateMesh();
+                chunk.UploadCollider(collider);
             }
+            else
+            {
+                Dispose();
+                GenerationData.flags = ChunkGenerationFlags.Disposed;
+                return GenerationData;
+            }
+
+            Dispose();
+            GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Data;
+
             return GenerationData;
         }
 

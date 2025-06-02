@@ -49,6 +49,7 @@ namespace VoxelSystem.Generators
                     int neighborY;
 
                     neighborY = heightMap[GetMapIndex(x, z + 1)].GetSolid();
+                    
                     if (z == chunkWidth || neighborY < y)
                     {
                         int vB2 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z + 1));
@@ -57,6 +58,7 @@ namespace VoxelSystem.Generators
                     }
 
                     neighborY = heightMap[GetMapIndex(x, z - 1)].GetSolid();
+
                     if (z == 1 || neighborY < y)
                     {
                         int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));
@@ -65,6 +67,7 @@ namespace VoxelSystem.Generators
                     }
 
                     neighborY = heightMap[GetMapIndex(x + 1, z)].GetSolid();
+
                     if (x == chunkWidth || neighborY < y)
                     {
                         int vB1 = AddVertex(ref vertexMap, new float3(voxelPos.x + 1, neighborY, voxelPos.z));
@@ -73,6 +76,7 @@ namespace VoxelSystem.Generators
                     }
 
                     neighborY = heightMap[GetMapIndex(x - 1, z)].GetSolid();
+
                     if (x == 1 || neighborY < y)
                     {
                         int vB0 = AddVertex(ref vertexMap, new float3(voxelPos.x, neighborY, voxelPos.z));
@@ -99,6 +103,7 @@ namespace VoxelSystem.Generators
         private int AddVertex(ref NativeHashMap<int3, int> vertexMap, float3 position)
         {
             int3 key = new((int)position.x, (int)position.y, (int)position.z);
+
             if (!vertexMap.TryGetValue(key, out int index))
             {
                 index = colliderData.vertsCount.Value;
@@ -106,6 +111,7 @@ namespace VoxelSystem.Generators
                 colliderData.vertsCount.Value++;
                 vertexMap[key] = index;
             }
+
             return index;
         }
 

@@ -52,34 +52,13 @@ namespace VoxelSystem.Generators
             _meshScheduled = false;
             _chunksManager = chunksManager;
 
-            if ((GenerationData.flags & ChunkGenerationFlags.Data) != 0)
-            {
-                var parameters = ChunkFactory.Instance.NoiseParameters;
-                _chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
-                _dataScheduled = true;
-                _completed = false;
-                Processed += 1;
-            }
-            else
+            if (!CheckAndScheduleDataGeneration())
             {
                 _chunk = _chunksManager?.GetChunk(GenerationData.position);
 
                 if (_chunk != null)
                 {
-                    if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
-                    {
-                        _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
-                        _colliderScheduled = true;
-                        _regenerating = true;
-                        _completed = false;
-                    }
-                    if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
-                    {
-                        _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
-                        _meshScheduled = true;
-                        _regenerating = true;
-                        _completed = false;
-                    }
+                    _regenerating = CheckAndScheduleColliderGeneration() | CheckAndScheduleMeshGeneration();
                 }
             }
 
@@ -98,79 +77,159 @@ namespace VoxelSystem.Generators
         /// <returns>True if all requested generation is complete</returns>
         public bool Complete()
         {
+            return CompleteDataGeneration() | CompleteColliderGeneration() | CompleteMeshGeneration();
+        }
 
-            if (_dataScheduled && _chunkDataGenerator.IsComplete)
-            {
-                _dataScheduled = true;
-                _dataScheduled = false;
-                GenerationData = _chunkDataGenerator.Complete();
+        /// <summary>
+        /// Checks if data generation is flagged for generation and initializes the data generator.
+        /// </summary>
+        /// <returns>True if the generation started, False if no generation scheduled</returns>
+        private bool CheckAndScheduleDataGeneration()
+        {
+            if (!((GenerationData.flags & ChunkGenerationFlags.Data) != 0)) return false;
 
-                if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
-                {
-                    if (GenerationData.flags != ChunkGenerationFlags.Disposed)
-                        _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                    _completed = true;
-                    Dispose();
-                    Processed -= 1;
-                }
-                else
-                {
+            var parameters = ChunkFactory.Instance.NoiseParameters;
+            _chunkDataGenerator = new ChunkDataGenerator(GenerationData, parameters, _chunksManager);
+            _dataScheduled = true;
+            _completed = false;
+            Processed += 1;
+            return true;
+        }
 
-                    if ((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)
-                    {
-                        _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
-                        _colliderScheduled = true;
-                    }
+        /// <summary>
+        /// Checks if collider generation is flagged for generation and initializes the collider generator.
+        /// </summary>
+        /// <returns>True if the generation started, False if no generation scheduled</returns>
+        private bool CheckAndScheduleColliderGeneration()
+        {
+            if (!((GenerationData.flags & ChunkGenerationFlags.Collider) != 0))
+                return false;
 
-                    if ((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)
-                    {
-                        _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
-                        _meshScheduled = true;
-                    }
-                }
-                _chunkDataGenerator = null;
+            _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
+            _colliderScheduled = true;
+            _completed = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if mesh generation is flagged for generation and initializes the mesh generator.
+        /// </summary>
+        /// <returns>True if the generation started, False if no generation scheduled</returns>
+        private bool CheckAndScheduleMeshGeneration()
+        {
+            if (!((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0))
+                return false;
+
+            _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
+            _meshScheduled = true;
+            _completed = false;
+            return true;
+        }
+
+        /// <summary>
+        /// Completes the data generation job and applies the data to the chunk.
+        /// Then checks if the generation is done or disposed, and schedules further tasks if needed.
+        /// </summary>
+        /// <returns>True if the data generation is complete</returns>
+        private bool CompleteDataGeneration()
+        {
+            if (!(_dataScheduled && _chunkDataGenerator.IsComplete))
                 return _completed;
+
+            _dataScheduled = true;
+            _dataScheduled = false;
+            GenerationData = _chunkDataGenerator.Complete();
+
+            if (IsGenerationDone() || IsGenerationDisposed())
+            {
+                if (!IsGenerationDisposed())
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+
+                _completed = true;
+                Processed -= 1;
+                Dispose();
+            }
+            else
+            {
+                CheckAndScheduleColliderGeneration();
+                CheckAndScheduleMeshGeneration();
             }
 
-            if (_colliderScheduled && _chunkColliderGenerator.IsComplete)
-            {
-                _colliderScheduled = false;
-                GenerationData = _chunkColliderGenerator.Complete();
-
-                if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
-                {
-                    if (GenerationData.flags != ChunkGenerationFlags.Disposed)
-                        _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                    _completed = true;
-                    Dispose();
-
-                    if (_regenerating == false)
-                        Processed -= 1;
-                }
-                _chunkColliderGenerator = null;
-                return _completed;
-            }
-
-            if (_meshScheduled && _chunkMeshGenerator.IsComplete)
-            {
-                _meshScheduled = false;
-                GenerationData = _chunkMeshGenerator.Complete();
-
-                if (GenerationData.flags == ChunkGenerationFlags.None || GenerationData.flags == ChunkGenerationFlags.Disposed)
-                {
-                    if (GenerationData.flags != ChunkGenerationFlags.Disposed)
-                        _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
-                    _completed = true;
-                    Dispose();
-
-                    if (_regenerating == false)
-                        Processed -= 1;
-                }
-                _chunkMeshGenerator = null;
-                return _completed;
-            }
-
+            _chunkDataGenerator = null;
             return _completed;
+        }
+
+        /// <summary>
+        /// Completes the collider generation job and applies the collider to the chunk.
+        /// </summary>
+        /// <returns>True if the collider generation is complete</returns>
+        private bool CompleteColliderGeneration()
+        {
+            if (!(_colliderScheduled && _chunkColliderGenerator.IsComplete))
+                return _completed;
+
+            _colliderScheduled = false;
+            GenerationData = _chunkColliderGenerator.Complete();
+
+            if (IsGenerationDone() || IsGenerationDisposed())
+            {
+                if (!IsGenerationDisposed())
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+
+                _completed = true;
+                Dispose();
+
+                if (!_regenerating)
+                    Processed -= 1;
+            }
+
+            _chunkColliderGenerator = null;
+            return _completed;
+        }
+
+        /// <summary>
+        /// Completes the mesh generation job and applies the mesh to the chunk.
+        /// </summary>
+        /// <returns>True if the mesh generation is complete</returns>
+        private bool CompleteMeshGeneration()
+        {
+            if (!(_meshScheduled && _chunkMeshGenerator.IsComplete))
+                return _completed;
+
+            _meshScheduled = false;
+            GenerationData = _chunkMeshGenerator.Complete();
+
+            if (IsGenerationDone() || IsGenerationDisposed())
+            {
+                if (!IsGenerationDisposed())
+                    _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+
+                _completed = true;
+                Dispose();
+
+                if (!_regenerating)
+                    Processed -= 1;
+            }
+
+            _chunkMeshGenerator = null;
+            return _completed;
+        }
+
+
+        /// <summary>
+        /// Checks if the generation is done by examining the flags in GenerationData.
+        /// </summary>
+        private bool IsGenerationDone()
+        {
+            return GenerationData.flags == ChunkGenerationFlags.None;
+        }
+
+        /// <summary>
+        /// Checks if the generation has been disposed, which means it will not be processed further.
+        /// </summary>
+        private bool IsGenerationDisposed()
+        {
+            return GenerationData.flags == ChunkGenerationFlags.Disposed;
         }
 
         /// <summary>

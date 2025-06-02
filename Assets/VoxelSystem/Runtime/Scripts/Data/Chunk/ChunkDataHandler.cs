@@ -68,6 +68,7 @@ namespace VoxelSystem.Data.Chunk
                 Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}.");
                 sizeMismatch = true;
             }
+
             if (!newHeightMap.IsCreated || newHeightMap.Length != expectedHeightMapLength)
             {
                 Debug.LogError($"ChunkDataHandler: Incorrect heightmap array length. Expected {expectedHeightMapLength}, got {newHeightMap.Length}.");
@@ -78,6 +79,7 @@ namespace VoxelSystem.Data.Chunk
             {
                 if (newVoxels.IsCreated) newVoxels.Dispose();
                 if (newHeightMap.IsCreated) newHeightMap.Dispose();
+
                 IsDataGenerated = false;
                 IsDirty = false;
                 return;

@@ -97,27 +97,27 @@ namespace VoxelSystem.Generators
             [0] = 4,
             [1] = 5,
             [2] = 1,
-            [3] = 0,    // back face
+            [3] = 0, // back face
             [4] = 5,
             [5] = 6,
             [6] = 2,
-            [7] = 1,    // right face
+            [7] = 1, // right face
             [8] = 6,
             [9] = 7,
             [10] = 3,
-            [11] = 2,  // front face
+            [11] = 2, // front face
             [12] = 7,
             [13] = 4,
             [14] = 0,
-            [15] = 3,// left face
+            [15] = 3, // left face
             [16] = 0,
             [17] = 1,
             [18] = 2,
-            [19] = 3,// top face
+            [19] = 3, // top face
             [20] = 7,
             [21] = 6,
             [22] = 5,
-            [23] = 4,// bottom face
+            [23] = 4, // bottom face
         };
 
         /// <summary>
@@ -215,29 +215,29 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (IsComplete)
+            if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+
+            jobHandle.Complete();
+
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+
+            if (GenerationData == null)
+                Debug.LogWarning($"ChunkMeshGenerator: GenerationData is null.");
+
+            if (chunk != null)
             {
-                jobHandle.Complete();
-
-                Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
-                if (GenerationData == null)
-                    Debug.LogWarning($"ChunkMeshGenerator: GenerationData is null.");
-
-                if (chunk != null)
-                {
-                    var mesh = meshData.GenerateMesh();
-                    chunk.UploadMesh(mesh);
-                }
-                else
-                {
-                    Dispose();
-                    GenerationData.flags = ChunkGenerationFlags.Disposed;
-                    return GenerationData;
-                }
-                
-                GenerationData.flags &= ChunkGenerationFlags.Data | ChunkGenerationFlags.Collider;
-                Dispose();
+                var mesh = meshData.GenerateMesh();
+                chunk.UploadMesh(mesh);
             }
+            else
+            {
+                Dispose();
+                GenerationData.flags = ChunkGenerationFlags.Disposed;
+                return GenerationData;
+            }
+
+            GenerationData.flags &= ChunkGenerationFlags.Data | ChunkGenerationFlags.Collider;
+            Dispose();
             return GenerationData;
         }
 
