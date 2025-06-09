@@ -30,7 +30,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Generates a chunk mesh using a single-threaded approach with Unity's job system and Burst compilation.
     /// </summary>
-    public class ChunkMeshGenerator : IChunkMeshGenerator, IDisposable
+    public class ChunkMeshGenerator : IChunkGenerator, IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
@@ -260,6 +260,11 @@ namespace VoxelSystem.Generators
             if (FaceVerticeIndex != null && FaceVerticeIndex.IsCreated) FaceVerticeIndex.Dispose();
             if (VerticeUVs != null && VerticeUVs.IsCreated) VerticeUVs.Dispose();
             if (FaceIndices != null && FaceIndices.IsCreated) FaceIndices.Dispose();
+        }
+
+        public void Dispose(bool disposingAll)
+        {
+            DisposeAll();
         }
     }
 }

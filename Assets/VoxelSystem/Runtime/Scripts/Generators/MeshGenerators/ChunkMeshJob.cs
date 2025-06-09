@@ -104,12 +104,12 @@ namespace VoxelSystem.Generators
             // Z component: texture/material ID
             float z = id;
 
-            return new float3(asfloat(packedPosition), asfloat(packedData), z);
+            return new float3(AsFloat(packedPosition), AsFloat(packedData), z);
         }
 
         // Helper method to convert uint to float without boxing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private readonly float asfloat(uint x)
+        private readonly float AsFloat(uint x)
         {
             return BitConverter.Int32BitsToSingle((int)x);
         }

@@ -13,7 +13,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Generates simplified collision meshes for chunks based on height map data.
     /// </summary>
-    public class ChunkColliderGenerator : IDisposable
+    public class ChunkColliderGenerator : IChunkGenerator, IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
@@ -98,6 +98,11 @@ namespace VoxelSystem.Generators
         {
             jobHandle.Complete();
             colliderData.Dispose();
+        }
+
+        public void Dispose(bool disposingAll)
+        {
+            Dispose();
         }
     }
 }

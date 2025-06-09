@@ -14,9 +14,9 @@ namespace VoxelSystem.Generators
     /// </summary>
     public class ChunkJob
     {
-        private ChunkDataGenerator _chunkDataGenerator;
-        private ChunkColliderGenerator _chunkColliderGenerator;
-        private IChunkMeshGenerator _chunkMeshGenerator;
+        private IChunkGenerator _chunkDataGenerator;
+        private IChunkGenerator _chunkColliderGenerator;
+        private IChunkGenerator _chunkMeshGenerator;
         private readonly IChunksManager _chunksManager;
         private readonly Chunk _chunk;
         private readonly bool _regenerating = false;

@@ -176,7 +176,7 @@ namespace VoxelSystem.Data.Blocks
         public void Dispose()
         {
             Debug.Log("[Blocks Catalogue] Disposing of Texture Mapping");
-            
+
             if (TextureMapping.IsCreated) TextureMapping.Dispose();
         }
     }

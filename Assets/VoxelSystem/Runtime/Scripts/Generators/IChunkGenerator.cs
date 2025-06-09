@@ -5,7 +5,7 @@ namespace VoxelSystem.Generators
     /// <summary>
     /// Interface for chunk mesh generators that provide a common API for different mesh generation strategies.
     /// </summary>
-    public interface IChunkMeshGenerator
+    public interface IChunkGenerator
     {
         /// <summary>
         /// Gets the generation data describing what is being generated.
@@ -27,5 +27,10 @@ namespace VoxelSystem.Generators
         /// Releases resources used by this generator.
         /// </summary>
         void Dispose();
+        
+        /// <summary>
+        /// Releases resources used by this generator.
+        /// </summary>
+        void Dispose(bool disposingAll);
     }
 }

@@ -17,7 +17,7 @@ namespace VoxelSystem.Generators
     /// Handles the generation of voxel terrain data for a chunk using multiple noise layers.
     /// Uses Unity's Job system with Burst compilation for efficient parallel processing.
     /// </summary>
-    public class ChunkDataGenerator : IDisposable
+    public class ChunkDataGenerator : IChunkGenerator, IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
