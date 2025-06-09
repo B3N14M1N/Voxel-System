@@ -150,7 +150,9 @@ namespace VoxelSystem.Factory
         /// </summary>
         public void Dispose()
         {
+            _chunksManager.Dispose();
             _chunksToProccess.Clear();
+            _cancellationTokenSource.Cancel();
         }
 
         /// <summary>
@@ -160,7 +162,6 @@ namespace VoxelSystem.Factory
         {
             Dispose();
             ChunkMeshGenerator.DisposeAll();
-            _cancellationTokenSource.Cancel();
         }
 
         /// <summary>
@@ -169,7 +170,6 @@ namespace VoxelSystem.Factory
         public void OnDestroy()
         {
             Dispose();
-            _cancellationTokenSource.Cancel();
         }
     }
 }

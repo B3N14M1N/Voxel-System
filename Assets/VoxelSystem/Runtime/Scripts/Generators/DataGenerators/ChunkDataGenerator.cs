@@ -10,6 +10,7 @@ using VoxelSystem.Settings.Generation;
 using VoxelSystem.Settings;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Data.Chunk;
+using VoxelSystem.SaveSystem;
 
 namespace VoxelSystem.Generators
 {
@@ -45,6 +46,11 @@ namespace VoxelSystem.Generators
         public bool IsComplete => jobHandle.IsCompleted;
 
         private readonly IChunksManager _chunksManager;
+        
+        /// <summary>
+        /// Indicates if the data was loaded from a saved file rather than generated.
+        /// </summary>
+        private readonly bool _loadedFromSave = false;
 
         /// <summary>
         /// Creates a new chunk data generator for the specified chunk position.
@@ -58,7 +64,37 @@ namespace VoxelSystem.Generators
         {
             GenerationData = generationData;
             _chunksManager = chunksManager;
+              // First check if there's saved data for this chunk
+            try
+            {
+                // Only attempt to load if we have the Data flag set
+                if ((generationData.flags & ChunkGenerationFlags.Data) != 0 && ChunkSaveSystem.ChunkSaveExists(generationData.position))
+                {
+                    if (WorldSettings.HasDebugging)
+                        Debug.Log($"Found saved data for chunk at {generationData.position}");
+                    
+                    // Use the synchronous loading since we're in the generator constructor
+                    if (ChunkSaveSystem.LoadChunkData(generationData.position, out Voxels, out HeightMap))
+                    {
+                        // Data loaded successfully, mark as complete
+                        _loadedFromSave = true;
+                        //jobHandle = new JobHandle();
+                        
+                        if (WorldSettings.HasDebugging)
+                            Debug.Log($"Successfully loaded chunk data for {generationData.position}");
+                            
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to load chunk data from save: {ex.Message}. Proceeding with new generation.");
+                // Continue with normal generation
+            }
 
+            // If we couldn't load the data or it doesn't exist, generate new data
+            
             // --- Prepare Data for the Job ---
 
             // 1. Octave Offsets (ensure they are generated in GenerationParameters)
@@ -153,9 +189,12 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+            if (!_loadedFromSave) // If job is not loaded from save check if it is complete
+            {
+                if (!IsComplete) return GenerationData; // If the job is not complete, return early.
 
-            jobHandle.Complete();
+                jobHandle.Complete();
+            }
 
             Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
 

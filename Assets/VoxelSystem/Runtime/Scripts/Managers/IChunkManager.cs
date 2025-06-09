@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.Structs;
@@ -7,7 +8,7 @@ namespace VoxelSystem.Managers
     /// <summary>
     /// Interface for chunk management systems that handle chunk lifecycle and operations.
     /// </summary>
-    public interface IChunksManager
+    public interface IChunksManager : IDisposable
     {
         /// <summary>
         /// Gets the center position around which chunks are generated.

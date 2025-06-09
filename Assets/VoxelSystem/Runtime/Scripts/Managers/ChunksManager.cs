@@ -9,6 +9,7 @@ using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Factory;
 using VoxelSystem.Generators;
+using VoxelSystem.SaveSystem;
 using VoxelSystem.Settings;
 using VoxelSystem.Utils;
 
@@ -67,9 +68,16 @@ namespace VoxelSystem.Managers
                 _pool.Enqueue(NewChunk);
             }
 
+            // Initialize the chunk save system
+            ChunkSaveSystem.Initialize();
+            
+            // Set up event handlers for world changes
             WorldSettings.OnWorldSettingsChanged += GenerateChunksPositionsCheck;
             WorldSettings.OnWorldChanged += Dispose;
             WorldSettings.OnWorldChanged += GenerateChunksPositionsCheck;
+            
+            // Initialize the save system again when world settings change
+            WorldSettings.OnWorldChanged += ChunkSaveSystem.Initialize;
 
             GenerateChunksPositionsCheck();
         }
@@ -248,6 +256,39 @@ namespace VoxelSystem.Managers
             }
         }
 
+        /// <inheritdoc/>
+        public Voxel GetVoxel(int x, int y, int z)
+        {
+            return GetVoxel(new Vector3(x, y, z));
+        }
+
+        /// <inheritdoc/>
+        public Voxel GetVoxel(Vector3 worldPos)
+        {
+            // --- Calculate Chunk Key using WorldSettings method ---
+            // WorldSettings.ChunkPositionFromPosition returns chunk coords (e.g., 0,0,0 or 1,0,0)
+            Vector3 chunkCoords = WorldSettings.ChunkPositionFromPosition(worldPos);
+            Vector3 chunkKey = chunkCoords;
+
+            // --- Calculate Local Coordinates ---
+            Vector3Int localPos = WorldToLocalCoords(worldPos);
+
+            // --- Get Chunk and Validate ---
+            Chunk targetChunk = GetChunk(chunkCoords);
+            if (targetChunk == null)
+            {
+                Debug.LogWarning($"GetVoxel failed: Chunk at key {chunkKey} (from world pos {worldPos}) not found.");
+                return Voxel.Empty;
+            }
+            if (!targetChunk.DataGenerated)
+            {
+                Debug.LogWarning($"GetVoxel failed: Chunk {chunkKey} exists but data not generated.");
+                return Voxel.Empty;
+            }
+
+            return targetChunk[worldPos];
+        }
+
         /// <summary>
         /// Modifies a single voxel at the specified world position.
         /// Uses WorldSettings.ChunkPositionFromPosition to find the chunk key.
@@ -416,8 +457,12 @@ namespace VoxelSystem.Managers
 
             while (_chunksToClear.Count != 0)
             {
-                if (cancellationToken.IsCancellationRequested) return;
-
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _chunksToClear.Dequeue().Dispose();
+                    continue;
+                }
+                
                 ClearChunkAndEnqueue(_chunksToClear.Dequeue());
                 await UniTask.Yield();
             }
@@ -461,45 +506,12 @@ namespace VoxelSystem.Managers
             }
             _generating.Clear();
 
+
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.UnloadUnusedAssetsImmediate();
             GC.Collect();
 #endif
         }
-
-        /// <inheritdoc/>
-        public Voxel GetVoxel(int x, int y, int z)
-        {
-            return GetVoxel(new Vector3(x, y, z));
-        }
-
-        /// <inheritdoc/>
-        public Voxel GetVoxel(Vector3 worldPos)
-        {
-            // --- Calculate Chunk Key using WorldSettings method ---
-            // WorldSettings.ChunkPositionFromPosition returns chunk coords (e.g., 0,0,0 or 1,0,0)
-            Vector3 chunkCoords = WorldSettings.ChunkPositionFromPosition(worldPos);
-            Vector3 chunkKey = chunkCoords;
-
-            // --- Calculate Local Coordinates ---
-            Vector3Int localPos = WorldToLocalCoords(worldPos);
-
-            // --- Get Chunk and Validate ---
-            Chunk targetChunk = GetChunk(chunkCoords);
-            if (targetChunk == null)
-            {
-                Debug.LogWarning($"GetVoxel failed: Chunk at key {chunkKey} (from world pos {worldPos}) not found.");
-                return Voxel.Empty;
-            }
-            if (!targetChunk.DataGenerated)
-            {
-                Debug.LogWarning($"GetVoxel failed: Chunk {chunkKey} exists but data not generated.");
-                return Voxel.Empty;
-            }
-
-            return targetChunk[worldPos];
-        }
-
         ~ChunksManager()
         {
             WorldSettings.OnWorldSettingsChanged -= GenerateChunksPositionsCheck;

@@ -255,11 +255,11 @@ namespace VoxelSystem.Generators
         /// </summary>
         public static void DisposeAll()
         {
-            if (Vertices != null && Vertices.IsCreated) Vertices.Dispose();
-            if (FaceCheck != null && FaceCheck.IsCreated) FaceCheck.Dispose();
-            if (FaceVerticeIndex != null && FaceVerticeIndex.IsCreated) FaceVerticeIndex.Dispose();
-            if (VerticeUVs != null && VerticeUVs.IsCreated) VerticeUVs.Dispose();
-            if (FaceIndices != null && FaceIndices.IsCreated) FaceIndices.Dispose();
+            if (Vertices.IsCreated) Vertices.Dispose();
+            if (FaceCheck.IsCreated) FaceCheck.Dispose();
+            if (FaceVerticeIndex.IsCreated) FaceVerticeIndex.Dispose();
+            if (VerticeUVs.IsCreated) VerticeUVs.Dispose();
+            if (FaceIndices.IsCreated) FaceIndices.Dispose();
         }
 
         public void Dispose(bool disposingAll)

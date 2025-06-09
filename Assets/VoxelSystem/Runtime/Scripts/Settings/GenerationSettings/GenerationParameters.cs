@@ -70,8 +70,8 @@ namespace VoxelSystem.Settings.Generation
         public void GenerateOctaveOffsets(uint maxOctaves)
         {
             System.Random prng = new(WorldSettings.Seed);
-            Debug.Log($"Generating {maxOctaves} octave offsets with seed {WorldSettings.Seed}");
             OctaveOffsets = new Vector2Int[maxOctaves];
+            
             for (int i = 0; i < maxOctaves; i++)
             {
                 // Generate large offsets to ensure different sampling points per octave
@@ -79,6 +79,9 @@ namespace VoxelSystem.Settings.Generation
                 int offsetY = prng.Next(-100000, 100000);
                 OctaveOffsets[i] = new Vector2Int(offsetX, offsetY);
             }
+            
+            if (WorldSettings.HasDebugging)
+                Debug.Log($"Generating {maxOctaves} octave offsets with seed {WorldSettings.Seed}");
         }
     }
 
