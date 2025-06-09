@@ -5,7 +5,6 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
-using VoxelSystem.Data;
 using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Generators
@@ -89,24 +88,30 @@ namespace VoxelSystem.Generators
             return z + (x * (chunkWidth + 2));
         }
 
-
         /// <summary>
         /// Packs vertex data into a float3 for efficient storage.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int heigth, byte id)
+        public readonly float3 PackVertexData(float3 position, int normalIndex, int uvIndex, int height, byte id)
         {
-            uint x = (uint)uvIndex;
-            x <<= 3;
-            x += (byte)(normalIndex & 0x7);
-            x <<= 8;
-            x += (byte)position.z;
-            x <<= 8;
-            x += (byte)position.y;
-            x <<= 8;
-            x += (byte)position.x;
+            // Use all 32 bits for position: 11 bits for x, 10 bits for y, 11 bits for z
+            // This allows for coordinates up to 2047 for x and z, and up to 1023 for y
+            uint packedPosition = ((uint)position.x & 0x7FF) | (((uint)position.y & 0x3FF) << 11) | (((uint)position.z & 0x7FF) << 21);
 
-            return new float3(BitConverter.Int32BitsToSingle((int)x), (float)heigth / chunkHeight, id);
+            // Y component: normalIndex (3 bits) + uvIndex (2 bits) + height value in upper bits
+            uint packedData = ((uint)normalIndex & 0x7) | (((uint)uvIndex & 0x3) << 3) | ((uint)height << 5);
+
+            // Z component: texture/material ID
+            float z = id;
+
+            return new float3(AsFloat(packedPosition), AsFloat(packedData), z);
+        }
+
+        // Helper method to convert uint to float without boxing
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private readonly float AsFloat(uint x)
+        {
+            return BitConverter.Int32BitsToSingle((int)x);
         }
 
         /// <summary>
@@ -114,25 +119,31 @@ namespace VoxelSystem.Generators
         /// </summary>
         public void Execute()
         {
-            for (int x = 1; x <= chunkWidth; x++)
+            for (int paddedX = 1; paddedX <= chunkWidth; paddedX++)
             {
-                for (int z = 1; z <= chunkWidth; z++)
+                for (int paddedZ = 1; paddedZ <= chunkWidth; paddedZ++)
                 {
-                    NativeArray<uint> neighbourHeights = new(4, Allocator.Temp);
-                    uint maxHeight = (uint)(heightMaps[GetMapIndex(x, z)].GetSolid() - 1);
-                    uint min = maxHeight;
+                    int index = GetMapIndex(paddedX, paddedZ);
+                    int x = paddedX - 1;
+                    int z = paddedZ - 1;
+
+                    NativeArray<int> neighbourHeights = new(4, Allocator.Temp);
+                    int maxHeight = heightMaps[index].GetSolid() - 1;
+                    int min = maxHeight;
 
                     for (int i = 0; i < 4; i++)
                     {
-                        float3 face = FaceCheck[i];
-                        neighbourHeights[i] = (uint)(heightMaps[GetMapIndex(x + (int)face.x, z + (int)face.z)].GetSolid() - 1);
+                        int3 face = (int3)FaceCheck[i];
+                        int mapIndex = GetMapIndex(paddedX + face.x, paddedZ + face.z);
+                        neighbourHeights[i] = heightMaps[mapIndex].GetSolid() - 1;
+                        
                         if (neighbourHeights[i] < min)
                             min = neighbourHeights[i];
                     }
 
-                    for (uint y = maxHeight; y >= min; y--)
+                    for (int y = maxHeight; y >= min; y--)
                     {
-                        Voxel voxel = voxels[GetVoxelIndex(x - 1, (int)y, z - 1)];
+                        Voxel voxel = voxels[GetVoxelIndex(x, y, z)];
 
                         if (voxel.IsEmpty)
                             continue;
@@ -146,9 +157,11 @@ namespace VoxelSystem.Generators
                                     continue;
                             }
 
-                            AddFace(i, new(x - 1, y, z - 1), voxel);
+                            AddFace(i, new(x, y, z), voxel);
                         }
                     }
+                    
+                    if (neighbourHeights.IsCreated) neighbourHeights.Dispose();
                 }
             }
         }
@@ -159,7 +172,6 @@ namespace VoxelSystem.Generators
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddFace(int faceIndex, float3 voxelPos, Voxel voxel)
         {
-
             int verts = meshData.vertsCount.Value;
             int tris = meshData.trisCount.Value;
             meshData.vertsCount.Value += 4;
@@ -170,6 +182,7 @@ namespace VoxelSystem.Generators
             {
                 meshData.vertices[verts + j] = PackVertexData(Vertices[FaceVerticeIndex[faceIndex * 4 + j]] + voxelPos, faceIndex, j, (int)voxelPos.y, atlasIndex);
             }
+            
             for (int k = 0; k < 6; k++)
             {
                 meshData.indices[tris + k] = verts + FaceIndices[k];

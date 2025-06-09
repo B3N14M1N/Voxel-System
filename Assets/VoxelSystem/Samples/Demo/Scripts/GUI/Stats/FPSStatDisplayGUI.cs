@@ -2,6 +2,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using VoxelSystem.Utils;
 
 public class FPSStatDisplayGUI : MonoBehaviour, IStatDisplay
 {

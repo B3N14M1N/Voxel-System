@@ -1,4 +1,3 @@
-/* GenerationParameters.cs */
 using System;
 using UnityEngine;
 
@@ -17,8 +16,7 @@ namespace VoxelSystem.Settings.Generation
 
         [Tooltip("The sea level percent height in voxels.")]
         [Range(0f, 1f)]
-        [field: SerializeField] public float SeaLevel { get; private set; } = 0.6f; // Example value
-
+        [field: SerializeField] public float SeaLevel { get; private set; } = 0.6f;
 
         [Header("Terrain Noise Layers")]
         [Tooltip("Defines large-scale continents and oceans.")]
@@ -48,9 +46,6 @@ namespace VoxelSystem.Settings.Generation
         [Tooltip("How many layers near sea level should be sand.")]
         [field: SerializeField] public int SandMargin { get; private set; } = 2;
 
-        // Add settings for different biomes if needed
-        // [field: SerializeField] public BiomeSettings[] Biomes { get; private set; }
-
         // Pre-calculate octave offsets based on seed during initialization or OnValidate
         [HideInInspector] public Vector2Int[] OctaveOffsets;
 
@@ -75,6 +70,7 @@ namespace VoxelSystem.Settings.Generation
         public void GenerateOctaveOffsets(uint maxOctaves)
         {
             System.Random prng = new(WorldSettings.Seed);
+            Debug.Log($"Generating {maxOctaves} octave offsets with seed {WorldSettings.Seed}");
             OctaveOffsets = new Vector2Int[maxOctaves];
             for (int i = 0; i < maxOctaves; i++)
             {
@@ -111,7 +107,6 @@ namespace VoxelSystem.Settings.Generation
 
     /// <summary>
     /// Defines parameters for a multi-octave Perlin/Simplex noise calculation.
-    /// (Similar to your original NoiseParameters, potentially add Simplex option later)
     /// </summary>
     [Serializable]
     public struct NoiseParameters
@@ -125,22 +120,6 @@ namespace VoxelSystem.Settings.Generation
         [Tooltip("How quickly noise amplitude decreases per octave (0-1).")]
         [Range(0f, 1f)]
         public float persistence;
-        // Removed blending, damping, maxHeight, ePow - these will be handled by NoiseLayerParameters and global settings
     };
 
-    // Optional: Define Biome Settings if needed
-    /*
-    [Serializable]
-    public struct BiomeSettings
-    {
-        public string name;
-        public VoxelType surfaceVoxel;
-        public VoxelType subsurfaceVoxel;
-        public float minHeight; // Normalized height
-        public float maxHeight; // Normalized height
-        public float minSteepness;
-        public float maxSteepness;
-        // Add temperature/moisture parameters if using more complex biome maps
-    }
-    */
 }

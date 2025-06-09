@@ -1,5 +1,6 @@
 using UnityEngine;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Chunk;
+using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Managers
 {
@@ -80,5 +81,21 @@ namespace VoxelSystem.Managers
         /// <param name="voxel">The voxel to place</param>
         /// <returns>True if the voxel was modified successfully</returns>
         bool ModifyVoxel(Vector3 worldPos, Voxel voxel);
+
+        /// <summary>
+        /// Retrieves a voxel at the specified world coordinates.
+        /// </summary>
+        /// <param name="x">The x coordinate in world space</param>
+        /// <param name="y">The y coordinate in world space</param>
+        /// <param name="z">The z coordinate in world space</param>
+        /// <returns>The voxel at the specified coordinates</returns>
+        Voxel GetVoxel(int x, int y, int z);
+
+        /// <summary>
+        /// Retrieves a voxel at the specified world position.
+        /// </summary>
+        /// <param name="worldPos">The position in world space</param>
+        /// <returns>The voxel at the specified position</returns>
+        Voxel GetVoxel(Vector3 worldPos);
     }
 }

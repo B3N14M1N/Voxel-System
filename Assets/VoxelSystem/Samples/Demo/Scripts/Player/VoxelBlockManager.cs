@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using VoxelSystem.Data;
 using VoxelSystem.Data.Blocks;
+using VoxelSystem.Data.Structs;
 using VoxelSystem.Managers;
 using Zenject;
 
@@ -18,6 +18,7 @@ public class VoxelBlockManager : MonoBehaviour
         Removing
     }
 
+    [Inject] private readonly PlayerStateManager _stateManager;
     [SerializeField] private Camera _mainCamera;
     [SerializeField] private GameObject _blockPrefab;
     [SerializeField] private LayerMask _terrainLayer;
@@ -89,6 +90,8 @@ public class VoxelBlockManager : MonoBehaviour
     /// </summary>
     private void Update()
     {
+        if(!_stateManager.CanControl) return;
+
         HidePreview();
 
         if (_currentState == PlacementState.None || EventSystem.current.IsPointerOverGameObject())

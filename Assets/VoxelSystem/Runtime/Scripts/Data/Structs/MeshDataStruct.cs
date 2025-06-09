@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Rendering;
 using UnityEngine;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Data.Structs
 {
@@ -11,7 +12,7 @@ namespace VoxelSystem.Data.Structs
     /// Represents mesh data using native arrays for efficient processing in jobs.
     /// </summary>
     [Serializable]
-    public struct MeshDataStruct
+    public struct MeshDataStruct: IDisposable
     {
         /// <summary>
         /// The vertices of the mesh.
@@ -68,6 +69,7 @@ namespace VoxelSystem.Data.Structs
         public void Dispose()
         {
             Initialized = false;
+            
             if (vertices.IsCreated) vertices.Dispose();
             if (indices.IsCreated) indices.Dispose();
             if (vertsCount.IsCreated) vertsCount.Dispose();

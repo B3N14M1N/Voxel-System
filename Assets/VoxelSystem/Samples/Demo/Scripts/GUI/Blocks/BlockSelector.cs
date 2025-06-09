@@ -1,8 +1,6 @@
-using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
-using VoxelSystem.Data;
+using VoxelSystem.Data.Structs;
 using Zenject;
 
 public class BlockSelector : MonoBehaviour

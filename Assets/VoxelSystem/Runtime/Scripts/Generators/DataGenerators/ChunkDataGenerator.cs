@@ -4,10 +4,12 @@ using UnityEngine;
 using VoxelSystem.Managers;
 using VoxelSystem.Data.GenerationFlags;
 using Unity.Collections;
-using VoxelSystem.Data;
 using Unity.Mathematics;
 using Unity.Jobs;
 using VoxelSystem.Settings.Generation;
+using VoxelSystem.Settings;
+using VoxelSystem.Data.Structs;
+using VoxelSystem.Data.Chunk;
 
 namespace VoxelSystem.Generators
 {
@@ -15,7 +17,7 @@ namespace VoxelSystem.Generators
     /// Handles the generation of voxel terrain data for a chunk using multiple noise layers.
     /// Uses Unity's Job system with Burst compilation for efficient parallel processing.
     /// </summary>
-    public class ChunkDataGenerator : IDisposable
+    public class ChunkDataGenerator : IChunkGenerator, IDisposable
     {
         /// <summary>
         /// Data describing what is being generated.
@@ -82,10 +84,12 @@ namespace VoxelSystem.Generators
 
             // 2. Noise Layer Parameters (convert to job-safe struct)
             var layers = new List<NoiseLayerParametersJob>();
+
             if (generationParams.ContinentalNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.ContinentalNoise));
             if (generationParams.MountainNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.MountainNoise));
             if (generationParams.HillNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.HillNoise));
             if (generationParams.DetailNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.DetailNoise));
+
             noiseLayers = new NativeArray<NoiseLayerParametersJob>(layers.ToArray(), Allocator.Persistent);
 
             // 3. Allocate Voxel and HeightMap Arrays
@@ -149,25 +153,28 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (IsComplete)
+            if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+
+            jobHandle.Complete();
+
+            Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
+
+            if (GenerationData == null)
+                Debug.LogWarning($"ChunkDataGenerator: GenerationData is null.");
+
+            if (chunk != null)
             {
-                jobHandle.Complete();
-
-                Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
-                if (chunk != null)
-                {
-                    chunk.UploadData(ref Voxels, ref HeightMap);
-                }
-                else
-                {
-                    Dispose(true);
-                    return null;
-                }
-
-                GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;
-                Dispose();
+                chunk.UploadData(ref Voxels, ref HeightMap);
+            }
+            else
+            {
+                Dispose(true);
+                GenerationData.flags = ChunkGenerationFlags.Disposed;
                 return GenerationData;
             }
+
+            GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;
+            Dispose();
             return GenerationData;
         }
 

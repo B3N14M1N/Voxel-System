@@ -5,6 +5,7 @@ using UnityEngine;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 using VoxelSystem.Settings.Generation;
 using Zenject;
 
@@ -13,7 +14,7 @@ namespace VoxelSystem.Factory
     /// <summary>
     /// Factory responsible for processing and generating chunks in the voxel system.
     /// </summary>
-    public class ChunkFactory : MonoBehaviour
+    public class ChunkFactory : MonoBehaviour, IDisposable
     {
         [Inject] private readonly IChunksManager _chunksManager;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -21,7 +22,6 @@ namespace VoxelSystem.Factory
         private List<GenerationData> _chunksToProccess = new();
         private Queue<GenerationData> _priorityChunksToProccess = new();
 
-        #region Fields
         private int _materialIndex = 0;
         private Vector2Int[] _octaveOffsets;
 
@@ -41,17 +41,17 @@ namespace VoxelSystem.Factory
         /// Key used to cycle through materials.
         /// </summary>
         [field: SerializeField] private KeyCode MaterialChangeKey { get; set; } = KeyCode.M;
-        
+
         /// <summary>
         /// Gets the currently selected material.
         /// </summary>
         public Material Material { get { return _materials[_materialIndex]; } }
-        
+
         /// <summary>
         /// Gets the noise octave offsets.
         /// </summary>
         [HideInInspector] public Vector2Int[] NoiseOctaves { get { return _octaveOffsets; } }
-        
+
         /// <summary>
         /// Controls whether materials can be changed at runtime.
         /// </summary>
@@ -61,7 +61,7 @@ namespace VoxelSystem.Factory
         /// Singleton instance of the ChunkFactory.
         /// </summary>
         private static ChunkFactory instance;
-        
+
         /// <summary>
         /// Gets the singleton instance of the ChunkFactory.
         /// </summary>
@@ -71,8 +71,7 @@ namespace VoxelSystem.Factory
             {
                 if (instance == null)
                     instance = FindAnyObjectByType<ChunkFactory>();
-                if (instance == null)
-                    instance = new ChunkFactory();
+
                 return instance;
             }
             private set
@@ -80,9 +79,6 @@ namespace VoxelSystem.Factory
                 instance = value;
             }
         }
-        #endregion
-
-        #region Initializations
 
         /// <summary>
         /// Initializes the chunk factory when the component awakens.
@@ -100,8 +96,6 @@ namespace VoxelSystem.Factory
         {
             NoiseParameters.OnValidate();
         }
-
-        #endregion
 
         /// <summary>
         /// Processes chunk generation queue each frame.
@@ -128,6 +122,7 @@ namespace VoxelSystem.Factory
                 _chunksToProccess.RemoveAt(i);
                 i--;
             }
+            
             _time = 0f;
         }
 

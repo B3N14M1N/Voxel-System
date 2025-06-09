@@ -1,11 +1,10 @@
-/* ChunkDataJob.cs */
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using VoxelSystem.Data;
 using VoxelSystem.Settings.Generation;
 using System.Runtime.CompilerServices;
+using VoxelSystem.Data.Structs;
 
 namespace VoxelSystem.Generators
 {
@@ -96,6 +95,7 @@ namespace VoxelSystem.Generators
             for (int i = 0; i < noiseLayers.Length; i++)
             {
                 NoiseLayerParametersJob layer = noiseLayers[i];
+
                 if (!layer.enabled) continue;
 
                 float noiseValue = GetNormalizedNoise(worldX, worldZ, layer.noise);
@@ -119,19 +119,18 @@ namespace VoxelSystem.Generators
             terrainHeight = math.clamp(terrainHeight, 1, chunkHeight - 1);
 
             // --- Set HeightMap ---
-            HeightMap heightMap = new((byte)terrainHeight);
+            HeightMap heightMap = new(terrainHeight);
             heightMaps[index] = heightMap;
 
             // --- Voxel Placement ---
 
             if (!(paddedX >= 1 && paddedZ >= 1 && paddedX <= chunkWidth && paddedZ <= chunkWidth)) return;
+
             Voxel grass = new((byte)VoxelType.grass);
             Voxel dirt = new((byte)VoxelType.dirt);
             Voxel stone = new((byte)VoxelType.stone);
             Voxel sand = new((byte)VoxelType.sand);
             Voxel air = Voxel.Empty;
-
-
 
             for (int y = 0; y < chunkHeight; y++)
             {
@@ -156,6 +155,7 @@ namespace VoxelSystem.Generators
                 {
                     if (y >= terrainHeight - dirtDepth)
                         voxelToPlace = dirt;
+
                     if (y == terrainHeight - 1)
                         voxelToPlace = grass;
                 }
@@ -197,6 +197,7 @@ namespace VoxelSystem.Generators
             }
 
             if (maxValue <= 0) return 0.5f;
+            
             return (total / maxValue + 1.0f) * 0.5f;
         }
 
