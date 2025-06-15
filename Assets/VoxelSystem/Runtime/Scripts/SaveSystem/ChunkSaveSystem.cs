@@ -6,16 +6,16 @@ using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Settings;
 using Unity.Collections;
-using System.Threading.Tasks;
 using System.Collections.Concurrent;
-using System.Buffers;
-using System.Runtime.CompilerServices;
 using System.IO.Compression;
 using System.Threading;
+using Cysharp.Threading.Tasks;
 using CompressionLevel = System.IO.Compression.CompressionLevel;
+using System.Threading.Tasks;
 
 namespace VoxelSystem.SaveSystem
 {
+
     /// <summary>
     /// Static class responsible for saving and loading chunk data efficiently using binary serialization.
     /// Handles disk I/O operations in a performant manner with optional compression.
@@ -69,10 +69,10 @@ namespace VoxelSystem.SaveSystem
         /// Asynchronously saves a chunk's data to disk if it's dirty.
         /// </summary>
         /// <param name="chunk">The chunk to save</param>
-        /// <returns>A task representing the save operation</returns>
-        public static async Task SaveChunkAsync(Chunk chunk)
+        /// <returns>A UniTask representing the save operation</returns>
+        public static async UniTask SaveChunkAsync(ChunkDataHandler chunk)
         {
-            if (!chunk.Dirty)
+            if (!chunk.IsDirty)
             {
                 return;
             }
@@ -127,7 +127,7 @@ namespace VoxelSystem.SaveSystem
         /// <summary>
         /// Internal method to handle the actual chunk data saving with compression.
         /// </summary>
-        private static async Task SaveChunkInternalAsync(Chunk chunk, string filePath)
+        private static async UniTask SaveChunkInternalAsync(ChunkDataHandler chunk, string filePath)
         {
             using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
                    bufferSize: 4096, useAsync: true);
@@ -142,18 +142,20 @@ namespace VoxelSystem.SaveSystem
             writer.Write(chunk.Position.z);
 
             // Write voxel data
-            var voxels = chunk.Voxels;
+            var voxels = chunk.VoxelsRef;
             writer.Write(voxels.Length);
 
             // Efficiently write the voxel data without copying
             await SaveVoxelDataAsync(writer, voxels);
+            //chunk.DisposeVoxels();
 
             // Write height map
-            var heightMap = chunk.HeightMap;
+            var heightMap = chunk.HeightMapRef;
             writer.Write(heightMap.Length);
 
             // Efficiently write the height map data without copying
             await SaveHeightMapDataAsync(writer, heightMap);
+            //chunk.DisposeHeightMap();
         }
 
         /// <summary>
@@ -192,7 +194,7 @@ namespace VoxelSystem.SaveSystem
         /// <summary>
         /// Efficiently writes voxel data to the stream asynchronously.
         /// </summary>
-        private static async Task SaveVoxelDataAsync(BinaryWriter writer, NativeArray<Voxel> voxels)
+        private static async UniTask SaveVoxelDataAsync(BinaryWriter writer, NativeArray<Voxel> voxels)
         {
             int length = voxels.Length;
             for (int i = 0; i < length; i++)
@@ -202,9 +204,11 @@ namespace VoxelSystem.SaveSystem
                 // Every 4096 voxels, allow other operations to proceed
                 if (i % 4096 == 0 && i > 0)
                 {
-                    await Task.Yield();
+                    await UniTask.Yield();
                 }
             }
+
+            if (voxels.IsCreated) voxels.Dispose();
         }
 
         /// <summary>
@@ -222,7 +226,7 @@ namespace VoxelSystem.SaveSystem
         /// <summary>
         /// Efficiently writes height map data to the stream asynchronously.
         /// </summary>
-        private static async Task SaveHeightMapDataAsync(BinaryWriter writer, NativeArray<HeightMap> heightMap)
+        private static async UniTask SaveHeightMapDataAsync(BinaryWriter writer, NativeArray<HeightMap> heightMap)
         {
             int length = heightMap.Length;
             for (int i = 0; i < length; i++)
@@ -232,9 +236,11 @@ namespace VoxelSystem.SaveSystem
                 // Every 2048 height values, allow other operations to proceed
                 if (i % 2048 == 0 && i > 0)
                 {
-                    await Task.Yield();
+                    await UniTask.Yield();
                 }
             }
+
+            if (heightMap.IsCreated) heightMap.Dispose();
         }
 
         /// <summary>
@@ -248,45 +254,38 @@ namespace VoxelSystem.SaveSystem
                 writer.Write(heightMap[i].GetSolid());
             }
         }
-/*
+
         /// <summary>
         /// Asynchronously loads chunk data from disk if it exists.
         /// </summary>
         /// <param name="position">The position of the chunk to load</param>
-        /// <param name="voxels">Output parameter for the loaded voxel data</param>
-        /// <param name="heightMap">Output parameter for the loaded height map data</param>
-        /// <returns>True if data was loaded successfully, false otherwise</returns>
-        public static async Task<bool> LoadChunkDataAsync(Vector3 position, out NativeArray<Voxel> voxels, out NativeArray<HeightMap> heightMap)
+        /// <returns>A UniTask containing the ChunkLoadResult with loaded data</returns>
+        public static async UniTask<ChunkLoadResult> LoadChunkDataAsync(Vector3 position)
         {
             string chunkFilePath = GetChunkFilePath(position);
 
             if (!File.Exists(chunkFilePath))
             {
-                voxels = default;
-                heightMap = default;
-                return false;
+                return new ChunkLoadResult(false);
             }
 
             try
             {
                 await _saveSemaphore.WaitAsync();
 
-                bool result = await LoadChunkInternalAsync(chunkFilePath, out voxels, out heightMap);
-                return result;
+                return await LoadChunkInternalAsync(chunkFilePath);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error loading chunk at {position}: {ex.Message}");
-                voxels = default;
-                heightMap = default;
-                return false;
+                return new ChunkLoadResult(false);
             }
             finally
             {
                 _saveSemaphore.Release();
             }
         }
-*/
+
         /// <summary>
         /// Synchronously loads chunk data from disk if it exists.
         /// </summary>
@@ -294,38 +293,34 @@ namespace VoxelSystem.SaveSystem
         /// <param name="voxels">Output parameter for the loaded voxel data</param>
         /// <param name="heightMap">Output parameter for the loaded height map data</param>
         /// <returns>True if data was loaded successfully, false otherwise</returns>
-        public static bool LoadChunkData(Vector3 position, out NativeArray<Voxel> voxels, out NativeArray<HeightMap> heightMap)
+        public static ChunkLoadResult LoadChunkData(Vector3 position)
         {
             string chunkFilePath = GetChunkFilePath(position);
 
             if (!File.Exists(chunkFilePath))
             {
-                voxels = default;
-                heightMap = default;
-                return false;
+                return new ChunkLoadResult(false);
             }
 
             try
             {
-                bool result = LoadChunkInternal(chunkFilePath, out voxels, out heightMap);
+                ChunkLoadResult result = LoadChunkInternal(chunkFilePath);
                 return result;
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Error loading chunk at {position}: {ex.Message}");
-                voxels = default;
-                heightMap = default;
-                return false;
+                return new ChunkLoadResult(false);
             }
         }
-/*
+
         /// <summary>
         /// Internal method to handle the actual chunk data loading with decompression.
         /// </summary>
-        private static async Task<bool> LoadChunkInternalAsync(string filePath, out NativeArray<Voxel> voxels, out NativeArray<HeightMap> heightMap)
+        private static async UniTask<ChunkLoadResult> LoadChunkInternalAsync(string filePath)
         {
-            voxels = default;
-            heightMap = default;
+            NativeArray<Voxel> voxels = default;
+            NativeArray<HeightMap> heightMap = default;
 
             using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
                    bufferSize: 4096, useAsync: true))
@@ -346,33 +341,33 @@ namespace VoxelSystem.SaveSystem
                     int voxelCount = reader.ReadInt32();
                     voxels = new NativeArray<Voxel>(voxelCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
-                    await LoadVoxelDataAsync(reader, ref voxels, voxelCount);
+                    await LoadVoxelDataAsync(reader, voxels, voxelCount);
 
                     // Read height map data
                     int heightMapCount = reader.ReadInt32();
                     heightMap = new NativeArray<HeightMap>(heightMapCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
-                    await LoadHeightMapDataAsync(reader, ref heightMap, heightMapCount);
+                    await LoadHeightMapDataAsync(reader, heightMap, heightMapCount);
 
-                    return true;
+                    return new ChunkLoadResult(voxels, heightMap);
                 }
                 catch
                 {
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
-                    throw;
+                    return new(false);
                 }
             }
         }
-*/
+
         /// <summary>
         /// Synchronous version of the internal load method.
         /// </summary>
-        private static bool LoadChunkInternal(string filePath, out NativeArray<Voxel> voxels, out NativeArray<HeightMap> heightMap)
+        private static ChunkLoadResult LoadChunkInternal(string filePath)
         {
-            voxels = default;
-            heightMap = default;
+            NativeArray<Voxel> voxels = default;
+            NativeArray<HeightMap> heightMap = default;
 
             using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var decompressStream = new GZipStream(fileStream, CompressionMode.Decompress))
@@ -399,23 +394,23 @@ namespace VoxelSystem.SaveSystem
                     heightMap = new NativeArray<HeightMap>(heightMapCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
                     LoadHeightMapData(reader, ref heightMap, heightMapCount);
-
-                    return true;
+                    ChunkLoadResult result = new(voxels, heightMap);
+                    return result;
                 }
                 catch
                 {
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
-                    throw;
+                    return new(false);
                 }
             }
         }
-/*
+
         /// <summary>
         /// Efficiently reads voxel data from the stream asynchronously.
         /// </summary>
-        private static async Task LoadVoxelDataAsync(BinaryReader reader, ref NativeArray<Voxel> voxels, int count)
+        private static async UniTask LoadVoxelDataAsync(BinaryReader reader, NativeArray<Voxel> voxels, int count)
         {
             for (int i = 0; i < count; i++)
             {
@@ -425,11 +420,11 @@ namespace VoxelSystem.SaveSystem
                 // Every 4096 voxels, allow other operations to proceed
                 if (i % 4096 == 0 && i > 0)
                 {
-                    await Task.Yield();
+                    await UniTask.Yield();
                 }
             }
         }
-*/
+
         /// <summary>
         /// Efficiently reads voxel data from the stream synchronously.
         /// </summary>
@@ -441,11 +436,11 @@ namespace VoxelSystem.SaveSystem
                 voxels[i] = new Voxel(value);
             }
         }
-/*
+
         /// <summary>
         /// Efficiently reads height map data from the stream asynchronously.
         /// </summary>
-        private static async Task LoadHeightMapDataAsync(BinaryReader reader, ref NativeArray<HeightMap> heightMap, int count)
+        private static async UniTask LoadHeightMapDataAsync(BinaryReader reader, NativeArray<HeightMap> heightMap, int count)
         {
             for (int i = 0; i < count; i++)
             {
@@ -455,11 +450,11 @@ namespace VoxelSystem.SaveSystem
                 // Every 2048 height values, allow other operations to proceed
                 if (i % 2048 == 0 && i > 0)
                 {
-                    await Task.Yield();
+                    await UniTask.Yield();
                 }
             }
         }
-*/
+
         /// <summary>
         /// Efficiently reads height map data from the stream synchronously.
         /// </summary>

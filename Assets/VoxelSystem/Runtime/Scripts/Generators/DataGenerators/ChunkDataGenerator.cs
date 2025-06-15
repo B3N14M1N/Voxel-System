@@ -46,7 +46,7 @@ namespace VoxelSystem.Generators
         public bool IsComplete => jobHandle.IsCompleted;
 
         private readonly IChunksManager _chunksManager;
-        
+
         /// <summary>
         /// Indicates if the data was loaded from a saved file rather than generated.
         /// </summary>
@@ -64,7 +64,7 @@ namespace VoxelSystem.Generators
         {
             GenerationData = generationData;
             _chunksManager = chunksManager;
-              // First check if there's saved data for this chunk
+            // First check if there's saved data for this chunk
             try
             {
                 // Only attempt to load if we have the Data flag set
@@ -72,18 +72,27 @@ namespace VoxelSystem.Generators
                 {
                     if (WorldSettings.HasDebugging)
                         Debug.Log($"Found saved data for chunk at {generationData.position}");
-                    
+
                     // Use the synchronous loading since we're in the generator constructor
-                    if (ChunkSaveSystem.LoadChunkData(generationData.position, out Voxels, out HeightMap))
+                    var result = ChunkSaveSystem.LoadChunkData(generationData.position);
+                    if (result.Success)
                     {
                         // Data loaded successfully, mark as complete
                         _loadedFromSave = true;
-                        //jobHandle = new JobHandle();
-                        
+
+                        Voxels = result.Voxels;
+                        HeightMap = result.HeightMap;
+
                         if (WorldSettings.HasDebugging)
                             Debug.Log($"Successfully loaded chunk data for {generationData.position}");
-                            
+
                         return;
+                    }
+                    else
+                    {
+                        result.Dispose();
+                        if (Voxels.IsCreated) Voxels.Dispose();
+                        if (HeightMap.IsCreated) HeightMap.Dispose();
                     }
                 }
             }
@@ -94,7 +103,7 @@ namespace VoxelSystem.Generators
             }
 
             // If we couldn't load the data or it doesn't exist, generate new data
-            
+
             // --- Prepare Data for the Job ---
 
             // 1. Octave Offsets (ensure they are generated in GenerationParameters)
@@ -189,7 +198,7 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (!_loadedFromSave) // If job is not loaded from save check if it is complete
+            if (!_loadedFromSave) // If data is not loaded from save, check if the job is complete
             {
                 if (!IsComplete) return GenerationData; // If the job is not complete, return early.
 

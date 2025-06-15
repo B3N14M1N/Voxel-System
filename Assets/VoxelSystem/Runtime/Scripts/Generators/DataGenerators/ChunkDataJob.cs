@@ -197,7 +197,7 @@ namespace VoxelSystem.Generators
             }
 
             if (maxValue <= 0) return 0.5f;
-            
+
             return (total / maxValue + 1.0f) * 0.5f;
         }
 

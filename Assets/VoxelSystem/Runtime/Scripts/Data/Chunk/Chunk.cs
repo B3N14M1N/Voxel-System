@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Unity.Collections;
 using UnityEngine;
 using VoxelSystem.Data.Structs;
@@ -13,7 +14,7 @@ namespace VoxelSystem.Data.Chunk
     /// </summary>
     public class Chunk : IDisposable
     {
-        private readonly ChunkDataHandler _dataHandler;
+        private ChunkDataHandler _dataHandler;
         private readonly ChunkViewHandler _viewHandler;
 
         /// <summary>
@@ -240,12 +241,13 @@ namespace VoxelSystem.Data.Chunk
             // Save chunk data if it's dirty before clearing
             if (Dirty && DataGenerated)
             {
-                // Use synchronous save for immediate clearing
-                ChunkSaveSystem.SaveChunk(this);
+                //ChunkSaveSystem.SaveChunk(this);
+                _dataHandler.Position = Position;
+                ChunkSaveSystem.SaveChunkAsync(_dataHandler).AsAsyncUnitUniTask();
                 Debug.Log($"Chunk at {Position} saved before clearing.");
             }
 
-            _dataHandler.Dispose();
+            _dataHandler = new ChunkDataHandler();
             _viewHandler.PrepareForPooling(); // Clear meshes, set inactive, reset name
         }
 
@@ -258,12 +260,15 @@ namespace VoxelSystem.Data.Chunk
             if (Dirty && DataGenerated)
             {
                 // Use synchronous save for immediate disposal
-                ChunkSaveSystem.SaveChunk(this);
+                //ChunkSaveSystem.SaveChunk(this);
+                _dataHandler.Position = Position;
+                ChunkSaveSystem.SaveChunkAsync(_dataHandler).AsAsyncUnitUniTask();
                 Debug.Log($"Chunk at {Position} saved before clearing.");
             }
 
             // Ensure handlers dispose their resources (NativeArrays, GameObject)
-            _dataHandler.Dispose();
+            //_dataHandler.Dispose();
+            _dataHandler = new ChunkDataHandler();
             _viewHandler.Dispose();
             //Null references to help GC (optional)
             //_chunksManager = null;

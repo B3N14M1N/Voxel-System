@@ -18,6 +18,12 @@ namespace VoxelSystem.Data.Chunk
         private NativeArray<Voxel> _voxels;
         private NativeArray<HeightMap> _heightMap;
 
+
+        /// <summary>
+        /// The position of the chunk.
+        /// </summary>
+        public Vector3 Position { get; set; }
+
         /// <summary>
         /// Gets a value indicating whether the core voxel and heightmap data has been generated and assigned.
         /// </summary>
@@ -275,19 +281,27 @@ namespace VoxelSystem.Data.Chunk
         /// </summary>
         public void Dispose()
         {
+            DisposeVoxels();
+            DisposeHeightMap();
+            IsDataGenerated = false;
+        }
+
+        public void DisposeVoxels()
+        {
             if (_voxels.IsCreated)
             {
                 _voxels.Dispose();
                 _voxels = default;
             }
+        }
 
+        public void DisposeHeightMap()
+        {
             if (_heightMap.IsCreated)
             {
                 _heightMap.Dispose();
                 _heightMap = default;
             }
-
-            IsDataGenerated = false;
         }
 
         /// <summary>
