@@ -21,7 +21,7 @@ namespace VoxelSystem.Settings
         public static event Action OnWorldSettingsChanged;
         public static event Action OnWorldChanged;
 
-        public static bool HasDebugging { get; set; } = false;
+        public static bool HasDebugging { get; set; } = true;
 
         /// <summary>
         /// Notify subscribers that the world settings have changed.

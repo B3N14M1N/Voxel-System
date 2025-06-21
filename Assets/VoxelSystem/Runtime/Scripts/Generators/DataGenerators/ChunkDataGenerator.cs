@@ -11,6 +11,8 @@ using VoxelSystem.Settings;
 using VoxelSystem.Data.Structs;
 using VoxelSystem.Data.Chunk;
 using VoxelSystem.SaveSystem;
+using Cysharp.Threading.Tasks;
+
 
 namespace VoxelSystem.Generators
 {
@@ -23,34 +25,27 @@ namespace VoxelSystem.Generators
         /// <summary>
         /// Data describing what is being generated.
         /// </summary>
-        public GenerationData GenerationData { get; private set; }
-
-        /// <summary>
-        /// The voxel data array for the chunk.
-        /// </summary>
+        public GenerationData GenerationData { get; private set; }        // Main data arrays that will be passed to the chunk
         public NativeArray<Voxel> Voxels;
-
-        /// <summary>
-        /// The height map data array for the chunk.
-        /// </summary>
         public NativeArray<HeightMap> HeightMap;
 
+        // Job system related fields
+        private GenerationParameters _generationParams;
         private NativeArray<int2> octaveOffsets;
         private NativeArray<NoiseLayerParametersJob> noiseLayers;
-
         private JobHandle jobHandle;
 
         /// <summary>
         /// Whether the generation job has completed.
         /// </summary>
-        public bool IsComplete => jobHandle.IsCompleted;
-
+        public bool IsComplete => (_hasLoaded && _isLoading)  || (_isGenerating && jobHandle.IsCompleted);
         private readonly IChunksManager _chunksManager;
 
-        /// <summary>
-        /// Indicates if the data was loaded from a saved file rather than generated.
-        /// </summary>
-        private readonly bool _loadedFromSave = false;
+        // Fields for async loading state
+        private bool _isLoading = false;
+        private bool _isGenerating = false;
+        private bool _hasLoaded = false;
+        private ChunkLoadResult? _loadResult;
 
         /// <summary>
         /// Creates a new chunk data generator for the specified chunk position.
@@ -64,64 +59,48 @@ namespace VoxelSystem.Generators
         {
             GenerationData = generationData;
             _chunksManager = chunksManager;
-            // First check if there's saved data for this chunk
-            try
+            _generationParams = generationParams;
+            _hasLoaded = false;
+
+            // First check if there's saved data for this chunk and start loading asynchronously
+            if (ChunkSaveSystem.ChunkSaveExists(generationData.position))
             {
-                // Only attempt to load if we have the Data flag set
-                if ((generationData.flags & ChunkGenerationFlags.Data) != 0 && ChunkSaveSystem.ChunkSaveExists(generationData.position))
-                {
-                    if (WorldSettings.HasDebugging)
-                        Debug.Log($"Found saved data for chunk at {generationData.position}");
+                if (WorldSettings.HasDebugging)
+                    Debug.Log($"Found saved data for chunk at {generationData.position}. Starting async loading.");
 
-                    // Use the synchronous loading since we're in the generator constructor
-                    var result = ChunkSaveSystem.LoadChunkData(generationData.position);
-                    if (result.Success)
-                    {
-                        // Data loaded successfully, mark as complete
-                        _loadedFromSave = true;
-
-                        Voxels = result.Voxels;
-                        HeightMap = result.HeightMap;
-
-                        if (WorldSettings.HasDebugging)
-                            Debug.Log($"Successfully loaded chunk data for {generationData.position}");
-
-                        return;
-                    }
-                    else
-                    {
-                        result.Dispose();
-                        if (Voxels.IsCreated) Voxels.Dispose();
-                        if (HeightMap.IsCreated) HeightMap.Dispose();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Failed to load chunk data from save: {ex.Message}. Proceeding with new generation.");
-                // Continue with normal generation
+                _isLoading = true;
+                _isGenerating = false;
+                // Start loading in background and don't await - we'll check in Complete()
+                StartLoadingAsync(generationData.position).Forget();
+                return;
             }
 
             // If we couldn't load the data or it doesn't exist, generate new data
 
             // --- Prepare Data for the Job ---
+            ScheduleDataGeneration();
+        }
 
+        private void ScheduleDataGeneration()
+        {
+            _isLoading = false;
+            _isGenerating = true;
             // 1. Octave Offsets (ensure they are generated in GenerationParameters)
-            if (generationParams.OctaveOffsets == null || generationParams.OctaveOffsets.Length == 0)
+            if (_generationParams.OctaveOffsets == null || _generationParams.OctaveOffsets.Length == 0)
             {
                 Debug.LogError("Octave Offsets not generated in GenerationParameters!");
-                generationParams.GenerateOctaveOffsets(10);
+                _generationParams.GenerateOctaveOffsets(10);
             }
 
             // Convert Vector2Int[] to int2[]
-            int numOffsets = generationParams.OctaveOffsets.Length;
-            var octaveOffsetsInt2 = new Unity.Mathematics.int2[numOffsets];
+            int numOffsets = _generationParams.OctaveOffsets.Length;
+            var octaveOffsetsInt2 = new int2[numOffsets];
 
             for (int i = 0; i < numOffsets; i++)
             {
-                octaveOffsetsInt2[i] = new Unity.Mathematics.int2(
-                    generationParams.OctaveOffsets[i].x,
-                    generationParams.OctaveOffsets[i].y
+                octaveOffsetsInt2[i] = new int2(
+                    _generationParams.OctaveOffsets[i].x,
+                    _generationParams.OctaveOffsets[i].y
                 );
             }
 
@@ -130,10 +109,10 @@ namespace VoxelSystem.Generators
             // 2. Noise Layer Parameters (convert to job-safe struct)
             var layers = new List<NoiseLayerParametersJob>();
 
-            if (generationParams.ContinentalNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.ContinentalNoise));
-            if (generationParams.MountainNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.MountainNoise));
-            if (generationParams.HillNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.HillNoise));
-            if (generationParams.DetailNoise?.enabled ?? false) layers.Add(CreateJobLayer(generationParams.DetailNoise));
+            if (_generationParams.ContinentalNoise?.enabled ?? false) layers.Add(CreateJobLayer(_generationParams.ContinentalNoise));
+            if (_generationParams.MountainNoise?.enabled ?? false) layers.Add(CreateJobLayer(_generationParams.MountainNoise));
+            if (_generationParams.HillNoise?.enabled ?? false) layers.Add(CreateJobLayer(_generationParams.HillNoise));
+            if (_generationParams.DetailNoise?.enabled ?? false) layers.Add(CreateJobLayer(_generationParams.DetailNoise));
 
             noiseLayers = new NativeArray<NoiseLayerParametersJob>(layers.ToArray(), Allocator.Persistent);
 
@@ -153,14 +132,14 @@ namespace VoxelSystem.Generators
                 chunkPos = GenerationData.position,
 
                 // General generation settings
-                globalScale = generationParams.GlobalScale,
-                seaLevel = generationParams.SeaLevel,
-                steepnessExponent = generationParams.SteepnessExponent,
-                mountainThreshold = generationParams.MountainThreshold,
+                globalScale = _generationParams.GlobalScale,
+                seaLevel = _generationParams.SeaLevel,
+                steepnessExponent = _generationParams.SteepnessExponent,
+                mountainThreshold = _generationParams.MountainThreshold,
 
                 // Biome/Voxel settings
-                dirtDepth = generationParams.DirtDepth,
-                sandMargin = generationParams.SandMargin,
+                dirtDepth = _generationParams.DirtDepth,
+                sandMargin = _generationParams.SandMargin,
 
                 // Noise data
                 noiseLayers = noiseLayers,
@@ -170,6 +149,9 @@ namespace VoxelSystem.Generators
                 voxels = Voxels,
                 heightMaps = HeightMap,
             };
+
+            if (WorldSettings.HasDebugging)
+                Debug.Log("ChunkDataGenerator: Started Generating");
 
             // Schedule the job to run in parallel
             jobHandle = dataJob.Schedule(HeightMap.Length, WorldSettings.ChunkWidth);
@@ -198,13 +180,40 @@ namespace VoxelSystem.Generators
         /// <returns>Updated generation data with new flags</returns>
         public GenerationData Complete()
         {
-            if (!_loadedFromSave) // If data is not loaded from save, check if the job is complete
-            {
-                if (!IsComplete) return GenerationData; // If the job is not complete, return early.
+            Debug.Log($"_isGenerating: {_isGenerating} jobHandle.IsCompleted: {jobHandle.IsCompleted}");
 
-                jobHandle.Complete();
+            if (_isLoading)
+            {
+                return GenerationData;
             }
 
+            // Safe job completion
+            try
+            {
+                if (_isGenerating && jobHandle.IsCompleted)
+                {
+                    if (WorldSettings.HasDebugging)
+                        Debug.Log("Data Generated");
+
+                    // Complete the job
+                    jobHandle.Complete();
+                }
+                else
+                {
+                    return GenerationData;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error completing job: {ex.Message} {ex.StackTrace}");
+                return GenerationData;
+            }
+
+            return UploadData();
+        }
+
+        private GenerationData UploadData()
+        {
             Chunk chunk = _chunksManager?.GetChunk(GenerationData.position);
 
             if (GenerationData == null)
@@ -212,7 +221,11 @@ namespace VoxelSystem.Generators
 
             if (chunk != null)
             {
+                if (WorldSettings.HasDebugging)
+                    Debug.Log($"ChunkDataGenerator: Loaded Voxels Count: {Voxels.Length}, HeightMap Count: {HeightMap.Length} in Chunk: {chunk.GetHashCode()}");
+
                 chunk.UploadData(ref Voxels, ref HeightMap);
+                _hasLoaded = true;
             }
             else
             {
@@ -241,7 +254,7 @@ namespace VoxelSystem.Generators
         /// <param name="disposingAll">Whether to also dispose data arrays</param>
         public void Dispose(bool disposingAll)
         {
-            if (jobHandle.IsCompleted)
+            if (jobHandle.IsCompleted) //jobHandle != null && 
                 jobHandle.Complete();
 
             if (octaveOffsets.IsCreated) octaveOffsets.Dispose();
@@ -260,6 +273,44 @@ namespace VoxelSystem.Generators
         ~ChunkDataGenerator()
         {
             Dispose(true);
+        }
+
+        /// <summary>
+        /// Starts loading chunk data asynchronously
+        /// </summary>
+        /// <param name="position">Position of the chunk to load</param>
+        /// <returns>Task that completes when loading finishes</returns>
+        private async UniTask<ChunkLoadResult> StartLoadingAsync(Vector3 position)
+        {
+            try
+            {
+                var result = await ChunkSaveSystem.LoadChunkDataAsync(position);
+
+                // Clean up previous arrays if they exist
+                if (Voxels.IsCreated) Voxels.Dispose();
+                if (HeightMap.IsCreated) HeightMap.Dispose();
+
+                _loadResult = result;
+                Voxels = _loadResult.Value.Voxels;
+                HeightMap = _loadResult.Value.HeightMap;
+
+                UploadData();
+
+                if (WorldSettings.HasDebugging && result.Success)
+                    Debug.Log($"Successfully loaded chunk data asynchronously for {position}\n" +
+                    $"ChunkDataGenerator: Loaded Voxels Count: {_loadResult.Value.Voxels.Length}\n" +
+                    $"Loaded HeightMap Count: {_loadResult.Value.HeightMap.Length}");
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _isLoading = false;
+                _hasLoaded = false;
+                Debug.LogWarning($"Failed to load chunk data asynchronously from save: {ex.Message}. Will fall back to generation.");
+                ScheduleDataGeneration();
+                return new ChunkLoadResult(false);
+            }
         }
     }
 }

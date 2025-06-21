@@ -58,7 +58,7 @@ namespace VoxelSystem.SaveSystem
         /// Checks if a saved chunk exists at the specified position.
         /// </summary>
         /// <param name="position">The position of the chunk to check</param>
-        /// <returns>True if saved data exists, false otherwise</returns>
+        /// <returns>True if saved data exists, false otherwise</returns>        
         public static bool ChunkSaveExists(Vector3 position)
         {
             string chunkFilePath = GetChunkFilePath(position);
@@ -351,8 +351,9 @@ namespace VoxelSystem.SaveSystem
 
                     return new ChunkLoadResult(voxels, heightMap);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.LogError($"ChunkSaveSystem: {ex.Message}\n {ex.StackTrace}");
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
@@ -397,8 +398,9 @@ namespace VoxelSystem.SaveSystem
                     ChunkLoadResult result = new(voxels, heightMap);
                     return result;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.LogError($"ChunkSaveSystem: {ex.Message}\n {ex.StackTrace}");
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
@@ -416,7 +418,7 @@ namespace VoxelSystem.SaveSystem
             {
                 byte value = reader.ReadByte();
                 voxels[i] = new Voxel(value);
-
+                
                 // Every 4096 voxels, allow other operations to proceed
                 if (i % 4096 == 0 && i > 0)
                 {
@@ -439,7 +441,7 @@ namespace VoxelSystem.SaveSystem
 
         /// <summary>
         /// Efficiently reads height map data from the stream asynchronously.
-        /// </summary>
+        /// </summary>        
         private static async UniTask LoadHeightMapDataAsync(BinaryReader reader, NativeArray<HeightMap> heightMap, int count)
         {
             for (int i = 0; i < count; i++)

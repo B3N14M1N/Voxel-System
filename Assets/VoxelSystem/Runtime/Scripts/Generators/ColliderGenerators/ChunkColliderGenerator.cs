@@ -45,10 +45,13 @@ namespace VoxelSystem.Generators
             IChunksManager chunksManager)
         {
             GenerationData = generationData;
+            _chunksManager = chunksManager;
+
             var verticesSize = WorldSettings.ChunkWidth * 4 * (WorldSettings.ChunkWidth + 4);
             int indicesSize = WorldSettings.ChunkWidth * (WorldSettings.ChunkWidth * 3 + 2) * 6;
+
             colliderData.Initialize(verticesSize, indicesSize);
-            _chunksManager = chunksManager;
+            
             var dataJob = new ChunkColliderJob()
             {
                 chunkWidth = WorldSettings.ChunkWidth,
@@ -56,6 +59,7 @@ namespace VoxelSystem.Generators
                 heightMap = heightMap,
                 colliderData = colliderData,
             };
+
             jobHandle = dataJob.Schedule();
         }
 

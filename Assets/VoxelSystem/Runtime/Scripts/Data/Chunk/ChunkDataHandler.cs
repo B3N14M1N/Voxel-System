@@ -165,7 +165,8 @@ namespace VoxelSystem.Data.Chunk
         }
 
         /// <summary>
-        /// Sets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1). Updates heightmap. Marks chunk dirty.
+        /// Sets the voxel at the specified local chunk coordinates.
+        /// Updates heightmap and marks chunk dirty.
         /// </summary>
         /// <param name="voxel">The voxel to set</param>
         /// <param name="x">The x coordinate within the chunk</param>

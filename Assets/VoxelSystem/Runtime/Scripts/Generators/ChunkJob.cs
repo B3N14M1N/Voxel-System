@@ -6,6 +6,7 @@ using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Generators
 {
@@ -77,6 +78,12 @@ namespace VoxelSystem.Generators
         /// <returns>True if all requested generation is complete</returns>
         public bool Complete()
         {
+            if (WorldSettings.HasDebugging)
+                Debug.Log($"ChunkJob: GenerationData" +
+                $"\nHasData = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Data)}" +
+                $"\nHasCollider = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Collider)}" +
+                $"\nHasMesh = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Mesh)}");
+
             return CompleteDataGeneration() | CompleteColliderGeneration() | CompleteMeshGeneration();
         }
 
@@ -102,8 +109,10 @@ namespace VoxelSystem.Generators
         /// <returns>True if the generation started, False if no generation scheduled</returns>
         private bool CheckAndScheduleColliderGeneration()
         {
-            if (!((GenerationData.flags & ChunkGenerationFlags.Collider) != 0))
-                return false;
+            if (!((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)) return false;
+
+            if (WorldSettings.HasDebugging && _chunk.HeightMap.Length <= 0)
+                Debug.LogError($"ChunkJob: CheckAndScheduleColliderGeneration -> HeightMap is empty on Chunk: {_chunk.GetHashCode()}");
 
             _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
             _colliderScheduled = true;
@@ -117,8 +126,10 @@ namespace VoxelSystem.Generators
         /// <returns>True if the generation started, False if no generation scheduled</returns>
         private bool CheckAndScheduleMeshGeneration()
         {
-            if (!((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0))
-                return false;
+            if (!((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)) return false;
+
+            if (WorldSettings.HasDebugging && _chunk.HeightMap.Length <= 0)
+                Debug.LogError($"ChunkJob: CheckAndScheduleMeshGeneration -> HeightMap is empty on Chunk: {_chunk.GetHashCode()}");
 
             _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
             _meshScheduled = true;
@@ -139,7 +150,7 @@ namespace VoxelSystem.Generators
             _dataScheduled = true;
             _dataScheduled = false;
             GenerationData = _chunkDataGenerator.Complete();
-
+            
             if (IsGenerationDone() || IsGenerationDisposed())
             {
                 if (!IsGenerationDisposed())
