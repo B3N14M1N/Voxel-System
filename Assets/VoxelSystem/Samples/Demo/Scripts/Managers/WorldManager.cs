@@ -4,6 +4,7 @@ using UnityEngine;
 using Zenject;
 using VoxelSystem.Settings;
 using VoxelSystem.Utils;
+using VoxelSystem.SaveSystem;
 
 namespace VoxelSystem.Managers
 {
@@ -54,6 +55,9 @@ namespace VoxelSystem.Managers
         /// </summary>
         private void OnApplicationQuit()
         {
+            // Clean up the semaphore in the ChunkSaveSystem to prevent issues on restart
+            ChunkSaveSystem.Cleanup();
+            
 #if UNITY_EDITOR
             EditorUtility.UnloadUnusedAssetsImmediate();
             GC.Collect();

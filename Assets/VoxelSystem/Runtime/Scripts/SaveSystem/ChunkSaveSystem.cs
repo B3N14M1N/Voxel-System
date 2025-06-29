@@ -11,7 +11,6 @@ using System.IO.Compression;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using CompressionLevel = System.IO.Compression.CompressionLevel;
-using System.Threading.Tasks;
 
 namespace VoxelSystem.SaveSystem
 {
@@ -25,8 +24,8 @@ namespace VoxelSystem.SaveSystem
         // How many save operations can happen concurrently
         private const int MAX_CONCURRENT_OPERATIONS = 8;
 
-        // Current active save operations
-        private static readonly SemaphoreSlim _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+        // Current active save operations - recreated on initialization to prevent deadlocks between sessions
+        private static SemaphoreSlim _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
 
         // Cache to avoid hitting the disk repeatedly for the same chunk
         private static readonly ConcurrentDictionary<string, DateTime> _chunkModificationCache = new ConcurrentDictionary<string, DateTime>();
@@ -77,9 +76,24 @@ namespace VoxelSystem.SaveSystem
                 return;
             }
 
+            // Validate the semaphore to ensure it's not in a bad state
+            if (_saveSemaphore == null)
+            {
+                Debug.LogWarning("Semaphore was null during SaveChunkAsync, reinitializing...");
+                _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+            }
+
             try
             {
-                await _saveSemaphore.WaitAsync();
+                // Use a timeout to prevent indefinite waiting if the semaphore is stuck
+                bool acquired = await _saveSemaphore.WaitAsync(TimeSpan.FromSeconds(5));
+                if (!acquired)
+                {
+                    Debug.LogWarning($"Timed out waiting for semaphore when saving chunk at {chunk.Position}, resetting semaphore");
+                    _saveSemaphore.Dispose();
+                    _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+                    return;
+                }
 
                 string chunkFilePath = GetChunkFilePath(chunk.Position);
 
@@ -94,7 +108,19 @@ namespace VoxelSystem.SaveSystem
             }
             finally
             {
-                _saveSemaphore.Release();
+                try
+                {
+                    // Only release if we have current waiters to avoid incrementing past the max count
+                    if (_saveSemaphore != null && _saveSemaphore.CurrentCount < MAX_CONCURRENT_OPERATIONS)
+                    {
+                        _saveSemaphore.Release();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Semaphore was disposed, create a new one
+                    _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+                }
             }
         }
 
@@ -269,9 +295,24 @@ namespace VoxelSystem.SaveSystem
                 return new ChunkLoadResult(false);
             }
 
+            // Validate the semaphore to ensure it's not in a bad state
+            if (_saveSemaphore == null)
+            {
+                Debug.LogWarning("Semaphore was null during LoadChunkDataAsync, reinitializing...");
+                _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+            }
+
             try
             {
-                await _saveSemaphore.WaitAsync();
+                // Use a timeout to prevent indefinite waiting if the semaphore is stuck
+                bool acquired = await _saveSemaphore.WaitAsync(TimeSpan.FromSeconds(5));
+                if (!acquired)
+                {
+                    Debug.LogWarning($"Timed out waiting for semaphore when loading chunk at {position}, resetting semaphore");
+                    _saveSemaphore.Dispose();
+                    _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+                    return new ChunkLoadResult(false);
+                }
 
                 return await LoadChunkInternalAsync(chunkFilePath);
             }
@@ -282,7 +323,19 @@ namespace VoxelSystem.SaveSystem
             }
             finally
             {
-                _saveSemaphore.Release();
+                try
+                {
+                    // Only release if we have current waiters to avoid incrementing past the max count
+                    if (_saveSemaphore != null && _saveSemaphore.CurrentCount < MAX_CONCURRENT_OPERATIONS)
+                    {
+                        _saveSemaphore.Release();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Semaphore was disposed, create a new one
+                    _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+                }
             }
         }
 
@@ -420,7 +473,7 @@ namespace VoxelSystem.SaveSystem
                 voxels[i] = new Voxel(value);
                 
                 // Every 4096 voxels, allow other operations to proceed
-                if (i % 4096 == 0 && i > 0)
+                if (i % PlayerSettings.VoxelsToLoadFromFile == 0 && i > 0)
                 {
                     await UniTask.Yield();
                 }
@@ -509,6 +562,9 @@ namespace VoxelSystem.SaveSystem
         public static int DeleteAllChunkSaves()
         {
             int count = 0;
+
+            if (WorldSettings.Instance == null) return count;
+
             string chunksPath = WorldSettings.Instance.PersistentChunksPath;
 
             if (Directory.Exists(chunksPath))
@@ -531,13 +587,22 @@ namespace VoxelSystem.SaveSystem
             }
 
             return count;
-        }        /// <summary>
-                 /// Initializes the chunk save system directory structure.
-                 /// </summary>
+        }
+        
+        /// <summary>
+        /// Initializes the chunk save system directory structure.
+        /// </summary>
         public static void Initialize()
         {
             try
             {
+                // Reset the semaphore to prevent deadlocks between sessions
+                if (_saveSemaphore != null)
+                {
+                    _saveSemaphore.Dispose();
+                }
+                _saveSemaphore = new SemaphoreSlim(MAX_CONCURRENT_OPERATIONS);
+
                 // Make sure world settings are available
                 if (WorldSettings.Instance == null)
                 {
@@ -561,6 +626,31 @@ namespace VoxelSystem.SaveSystem
             catch (Exception ex)
             {
                 Debug.LogError($"Failed to initialize ChunkSaveSystem: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cleans up the chunk save system resources, particularly the semaphore.
+        /// Should be called when the application is exiting.
+        /// </summary>
+        public static void Cleanup()
+        {
+            try
+            {
+                if (_saveSemaphore != null)
+                {
+                    _saveSemaphore.Dispose();
+                    _saveSemaphore = null;
+                }
+                
+                _chunkModificationCache.Clear();
+                
+                if (WorldSettings.HasDebugging)
+                    Debug.Log("ChunkSaveSystem cleaned up successfully.");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error during ChunkSaveSystem cleanup: {ex.Message}");
             }
         }
     }

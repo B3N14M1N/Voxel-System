@@ -221,9 +221,6 @@ namespace VoxelSystem.Generators
 
             if (chunk != null)
             {
-                if (WorldSettings.HasDebugging)
-                    Debug.Log($"ChunkDataGenerator: Loaded Voxels Count: {Voxels.Length}, HeightMap Count: {HeightMap.Length} in Chunk: {chunk.GetHashCode()}");
-
                 chunk.UploadData(ref Voxels, ref HeightMap);
                 _hasLoaded = true;
             }

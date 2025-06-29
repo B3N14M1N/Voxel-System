@@ -36,6 +36,10 @@ namespace VoxelSystem.Generators
         /// </summary>
         public static int Processed { get; private set; }
 
+        public static void ResetProcessed()
+        {
+            Processed = 0;
+        }
         /// <summary>
         /// Creates a new chunk generation job and initiates processing.
         /// </summary>
@@ -78,7 +82,7 @@ namespace VoxelSystem.Generators
         /// <returns>True if all requested generation is complete</returns>
         public bool Complete()
         {
-            if (WorldSettings.HasDebugging)
+            if (false && WorldSettings.HasDebugging)
                 Debug.Log($"ChunkJob: GenerationData" +
                 $"\nHasData = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Data)}" +
                 $"\nHasCollider = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Collider)}" +

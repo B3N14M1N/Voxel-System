@@ -13,7 +13,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
     [field: SerializeField] private TMP_InputField InputRenderDistance { get; set; }
     [field: SerializeField] private TMP_InputField InputCacheDistance { get; set; }
     [field: SerializeField] private TMP_InputField InputChunksProcessed { get; set; }
-    [field: SerializeField] private TMP_InputField InputChunksToLoad { get; set; }
+    [field: SerializeField] private TMP_InputField InputVoxelsToLoadFromFile { get; set; }
     [field: SerializeField] private TMP_InputField InputTimeToLoadNextChunks { get; set; }
     [field: SerializeField] private TMP_Dropdown MeshGeneratorTypeDropdown { get; set; }
     [field: SerializeField] private bool PrintDebug { get; set; } = false;
@@ -28,7 +28,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         if (InputRenderDistance == null ||
             InputCacheDistance == null ||
             InputChunksProcessed == null ||
-            InputChunksToLoad == null ||
+            InputVoxelsToLoadFromFile == null ||
             InputTimeToLoadNextChunks == null ||
             MeshGeneratorTypeDropdown == null)
         {
@@ -39,7 +39,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         InputRenderDistance.text = PlayerSettings.RenderDistance.ToString();
         InputCacheDistance.text = PlayerSettings.CacheDistance.ToString();
         InputChunksProcessed.text = PlayerSettings.ChunksProcessed.ToString();
-        InputChunksToLoad.text = PlayerSettings.ChunksToLoad.ToString();
+        InputVoxelsToLoadFromFile.text = PlayerSettings.VoxelsToLoadFromFile.ToString();
         InputTimeToLoadNextChunks.text = PlayerSettings.TimeToLoadNextChunks.ToString();
 
         MeshGeneratorTypeDropdown.ClearOptions();
@@ -54,7 +54,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         if (InputRenderDistance == null ||
             InputCacheDistance == null ||
             InputChunksProcessed == null ||
-            InputChunksToLoad == null ||
+            InputVoxelsToLoadFromFile == null ||
             InputTimeToLoadNextChunks == null ||
             MeshGeneratorTypeDropdown == null)
         {
@@ -68,8 +68,8 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
         PlayerSettings.CacheDistance = valueInt >= 0 ? valueInt : PlayerSettings.CacheDistance;
         valueInt = Convert.ToInt32(InputChunksProcessed.text);
         PlayerSettings.ChunksProcessed = valueInt > 0 ? valueInt : PlayerSettings.ChunksProcessed;
-        valueInt = Convert.ToInt32(InputChunksToLoad.text);
-        PlayerSettings.ChunksToLoad = valueInt > 0 ? valueInt : PlayerSettings.ChunksToLoad;
+        valueInt = Convert.ToInt32(InputVoxelsToLoadFromFile.text);
+        PlayerSettings.VoxelsToLoadFromFile = valueInt > 0 ? valueInt : PlayerSettings.VoxelsToLoadFromFile;
         var valueFloat = (float)Convert.ToDouble(InputTimeToLoadNextChunks.text);
         PlayerSettings.TimeToLoadNextChunks = valueFloat >= 0 ? valueFloat : PlayerSettings.TimeToLoadNextChunks;
         PlayerSettings.MeshGeneratorType = (MeshGeneratorType)MeshGeneratorTypeDropdown.value;
@@ -84,7 +84,7 @@ public class PlayerSettingsGUI : MonoBehaviour, ISettings
             $"RenderDistance: {PlayerSettings.RenderDistance};\n" +
             $"CacheDistance: {PlayerSettings.CacheDistance};\n" +
             $"ChunksProcessed: {PlayerSettings.ChunksProcessed};\n" +
-            $"ChunksToLoad: {PlayerSettings.ChunksToLoad};\n" +
+            $"VoxelsToLoadFromFile: {PlayerSettings.VoxelsToLoadFromFile};\n" +
             $"TimeToLoadNextChunks: {PlayerSettings.TimeToLoadNextChunks};\n" +
             $"MeshGeneratorType: {PlayerSettings.MeshGeneratorType}");
     }
