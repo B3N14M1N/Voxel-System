@@ -18,6 +18,12 @@ namespace VoxelSystem.Data.Chunk
         private NativeArray<Voxel> _voxels;
         private NativeArray<HeightMap> _heightMap;
 
+
+        /// <summary>
+        /// The position of the chunk.
+        /// </summary>
+        public Vector3 Position { get; set; }
+
         /// <summary>
         /// Gets a value indicating whether the core voxel and heightmap data has been generated and assigned.
         /// </summary>
@@ -65,7 +71,7 @@ namespace VoxelSystem.Data.Chunk
 
             if (!newVoxels.IsCreated || newVoxels.Length != expectedVoxelLength)
             {
-                Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}.");
+                Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}. at chunk {Position}");
                 sizeMismatch = true;
             }
 
@@ -159,7 +165,8 @@ namespace VoxelSystem.Data.Chunk
         }
 
         /// <summary>
-        /// Sets the voxel at the specified local chunk coordinates (0 to Width-1 / 0 to Height-1). Updates heightmap. Marks chunk dirty.
+        /// Sets the voxel at the specified local chunk coordinates.
+        /// Updates heightmap and marks chunk dirty.
         /// </summary>
         /// <param name="voxel">The voxel to set</param>
         /// <param name="x">The x coordinate within the chunk</param>
@@ -275,19 +282,27 @@ namespace VoxelSystem.Data.Chunk
         /// </summary>
         public void Dispose()
         {
+            DisposeVoxels();
+            DisposeHeightMap();
+            IsDataGenerated = false;
+        }
+
+        public void DisposeVoxels()
+        {
             if (_voxels.IsCreated)
             {
                 _voxels.Dispose();
                 _voxels = default;
             }
+        }
 
+        public void DisposeHeightMap()
+        {
             if (_heightMap.IsCreated)
             {
                 _heightMap.Dispose();
                 _heightMap = default;
             }
-
-            IsDataGenerated = false;
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.GenerationFlags;
 using VoxelSystem.Factory;
 using VoxelSystem.Managers;
+using VoxelSystem.Settings;
 
 namespace VoxelSystem.Generators
 {
@@ -24,6 +25,7 @@ namespace VoxelSystem.Generators
         private bool _dataScheduled;
         private bool _colliderScheduled;
         private bool _meshScheduled;
+        private bool _toDispose = false; // Flag to indicate if resources should be disposed and generation stopped
 
         /// <summary>
         /// Gets the generation data for this job, containing position and generation flags.
@@ -34,6 +36,11 @@ namespace VoxelSystem.Generators
         /// Gets the count of actively processing jobs.
         /// </summary>
         public static int Processed { get; private set; }
+
+        public static void ResetProcessed()
+        {
+            Processed = 0;
+        }
 
         /// <summary>
         /// Creates a new chunk generation job and initiates processing.
@@ -77,6 +84,12 @@ namespace VoxelSystem.Generators
         /// <returns>True if all requested generation is complete</returns>
         public bool Complete()
         {
+            if (false && WorldSettings.HasDebugging)
+                Debug.Log($"ChunkJob: GenerationData" +
+                $"\nHasData = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Data)}" +
+                $"\nHasCollider = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Collider)}" +
+                $"\nHasMesh = {GenerationData.flags.HasFlag(ChunkGenerationFlags.Mesh)}");
+
             return CompleteDataGeneration() | CompleteColliderGeneration() | CompleteMeshGeneration();
         }
 
@@ -102,8 +115,18 @@ namespace VoxelSystem.Generators
         /// <returns>True if the generation started, False if no generation scheduled</returns>
         private bool CheckAndScheduleColliderGeneration()
         {
-            if (!((GenerationData.flags & ChunkGenerationFlags.Collider) != 0))
+            if (!((GenerationData.flags & ChunkGenerationFlags.Collider) != 0)) return false;
+
+            if (_chunk.HeightMap.Length <= 0)
+            {
+                if (WorldSettings.HasDebugging)
+                {
+                    Debug.LogError($"ChunkJob: CheckAndScheduleColliderGeneration -> HeightMap is empty on Chunk: {_chunk.GetHashCode()}");
+                }
+                _completed = true;
+                _colliderScheduled = false;
                 return false;
+            }
 
             _chunkColliderGenerator = new ChunkColliderGenerator(GenerationData, ref _chunk.HeightMap, _chunksManager);
             _colliderScheduled = true;
@@ -117,8 +140,18 @@ namespace VoxelSystem.Generators
         /// <returns>True if the generation started, False if no generation scheduled</returns>
         private bool CheckAndScheduleMeshGeneration()
         {
-            if (!((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0))
+            if (!((GenerationData.flags & ChunkGenerationFlags.Mesh) != 0)) return false;
+
+            if (_chunk.HeightMap.Length <= 0)
+            {
+                if (WorldSettings.HasDebugging)
+                {
+                    Debug.LogError($"ChunkJob: CheckAndScheduleMeshGeneration -> HeightMap is empty on Chunk: {_chunk.GetHashCode()}");
+                }
+                _completed = true;
+                _meshScheduled = false;
                 return false;
+            }
 
             _chunkMeshGenerator = new ChunkMeshGenerator(GenerationData, ref _chunk.Voxels, ref _chunk.HeightMap, _chunksManager);
             _meshScheduled = true;
@@ -136,7 +169,6 @@ namespace VoxelSystem.Generators
             if (!(_dataScheduled && _chunkDataGenerator.IsComplete))
                 return _completed;
 
-            _dataScheduled = true;
             _dataScheduled = false;
             GenerationData = _chunkDataGenerator.Complete();
 
@@ -144,6 +176,8 @@ namespace VoxelSystem.Generators
             {
                 if (!IsGenerationDisposed())
                     _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                else
+                    _chunksManager?.DisposeGeneratingChunk(GenerationData.position);
 
                 _completed = true;
                 Processed -= 1;
@@ -151,8 +185,18 @@ namespace VoxelSystem.Generators
             }
             else
             {
-                CheckAndScheduleColliderGeneration();
-                CheckAndScheduleMeshGeneration();
+
+                if (_chunk.HeightMap.Length <= 0)
+                {
+                    _completed = true;
+                    Processed -= 1;
+                    Dispose();
+                }
+                else
+                {
+                    CheckAndScheduleColliderGeneration();
+                    CheckAndScheduleMeshGeneration();
+                }
             }
 
             _chunkDataGenerator = null;
@@ -175,6 +219,8 @@ namespace VoxelSystem.Generators
             {
                 if (!IsGenerationDisposed())
                     _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                else
+                    _chunksManager?.DisposeGeneratingChunk(GenerationData.position);
 
                 _completed = true;
                 Dispose();
@@ -203,6 +249,8 @@ namespace VoxelSystem.Generators
             {
                 if (!IsGenerationDisposed())
                     _chunksManager?.CompleteGeneratingChunk(GenerationData.position);
+                else
+                    _chunksManager?.DisposeGeneratingChunk(GenerationData.position);
 
                 _completed = true;
                 Dispose();
@@ -214,7 +262,6 @@ namespace VoxelSystem.Generators
             _chunkMeshGenerator = null;
             return _completed;
         }
-
 
         /// <summary>
         /// Checks if the generation is done by examining the flags in GenerationData.
@@ -229,7 +276,7 @@ namespace VoxelSystem.Generators
         /// </summary>
         private bool IsGenerationDisposed()
         {
-            return GenerationData.flags == ChunkGenerationFlags.Disposed;
+            return GenerationData.flags == ChunkGenerationFlags.Disposed || _toDispose;
         }
 
         /// <summary>
@@ -246,6 +293,16 @@ namespace VoxelSystem.Generators
             {
                 Debug.Log("Generation was canceled.");
             }
+        }
+
+        /// <summary>
+        /// Requests that this chunk job stop further generation and dispose its resources.
+        /// </summary>
+        /// <param name="disposeData">Whether to also dispose data resources</param>
+        public void RequestDispose(bool disposeData = false)
+        {
+            _toDispose = true;
+            Dispose(disposeData);
         }
 
         /// <summary>

@@ -1,7 +1,9 @@
 using UnityEngine;
 using VoxelSystem.Data.Blocks;
+using VoxelSystem.Factory;
 using VoxelSystem.Generators;
 using VoxelSystem.Managers;
+using VoxelSystem.SaveSystem;
 using VoxelSystem.Settings;
 using Zenject;
 
@@ -32,6 +34,8 @@ public class GameInstaller : MonoInstaller
 
     public void OnApplicationQuit()
     {
+        // Clean up the chunk save system to prevent semaphore issues on restart
+        ChunkSaveSystem.Cleanup();
         _blocks.Dispose();
     }
 }

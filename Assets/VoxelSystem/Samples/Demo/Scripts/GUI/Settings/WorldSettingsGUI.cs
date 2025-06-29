@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using VoxelSystem.Factory;
+using VoxelSystem.SaveSystem;
 using VoxelSystem.Settings;
 using Zenject;
 
@@ -81,12 +82,15 @@ public class WorldSettingsGUI : MonoBehaviour, ISettings
         Load();
         if (seedChanged)
         {
+            ChunkSaveSystem.DeleteAllChunkSaves();
             WorldSettings.NotifyWorldChanged();
             return;
         }
 
         if (settingsChanged)
         {
+            ChunkSaveSystem.DeleteAllChunkSaves();
+            WorldSettings.ResetCurrentWorld();
             WorldSettings.NotifySettingsChanged();
         }
     }

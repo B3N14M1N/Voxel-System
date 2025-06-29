@@ -2,6 +2,8 @@ using UnityEngine;
 using System.IO;
 using System;
 using VoxelSystem.Factory;
+using VoxelSystem.SaveSystem;
+using VoxelSystem.Generators;
 
 namespace VoxelSystem.Settings
 {
@@ -21,7 +23,7 @@ namespace VoxelSystem.Settings
         public static event Action OnWorldSettingsChanged;
         public static event Action OnWorldChanged;
 
-        public static bool HasDebugging { get; set; } = false;
+        public static bool HasDebugging { get; set; } = true;
 
         /// <summary>
         /// Notify subscribers that the world settings have changed.
@@ -29,9 +31,13 @@ namespace VoxelSystem.Settings
         /// </summary>
         public static void NotifySettingsChanged()
         {
+            //ChunkSaveSystem.DeleteAllChunkSaves();
             ChunkBounds = RecalculatedBounds;
             OnWorldSettingsChanged?.Invoke();
             Instance?.SaveWorldSettings();
+
+            // Reinitialize the ChunkSaveSystem to ensure semaphores are in a good state
+            ChunkSaveSystem.Initialize();
         }
 
         /// <summary>
@@ -43,8 +49,19 @@ namespace VoxelSystem.Settings
             OnWorldChanged?.Invoke();
             Instance?.SaveWorldSettings();
             ChunkBounds = RecalculatedBounds;
+            
+            // Reinitialize the ChunkSaveSystem to ensure semaphores are in a good state
+            ChunkSaveSystem.Initialize();
         }
 
+        public static void ResetCurrentWorld()
+        {
+            OnWorldChanged?.Invoke();
+            Instance?.SaveWorldSettings();
+            ChunkBounds = RecalculatedBounds;
+            // Reinitialize the ChunkSaveSystem to ensure semaphores are in a good state
+            ChunkSaveSystem.Initialize();
+        }
         public static int Seed = 0;
 
         public static int ChunkWidth = 32;
@@ -83,6 +100,7 @@ namespace VoxelSystem.Settings
         {
             Instance = this;
             WorldPath = worldPath;
+            ChunkJob.ResetProcessed();
 
             // Create worlds directory if it doesn't exist
             if (!Directory.Exists(WorldsDirectory))

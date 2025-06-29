@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using VoxelSystem.Data.Chunk;
 using VoxelSystem.Data.Structs;
@@ -7,7 +8,7 @@ namespace VoxelSystem.Managers
     /// <summary>
     /// Interface for chunk management systems that handle chunk lifecycle and operations.
     /// </summary>
-    public interface IChunksManager
+    public interface IChunksManager : IDisposable
     {
         /// <summary>
         /// Gets the center position around which chunks are generated.
@@ -44,6 +45,12 @@ namespace VoxelSystem.Managers
         /// <param name="pos">The position of the chunk</param>
         void CompleteGeneratingChunk(Vector3 pos);
 
+        /// <summary>
+        /// Dispose the generating chunk.
+        /// </summary>
+        /// <param name="pos"></param>
+        void DisposeGeneratingChunk(Vector3 pos);
+        
         /// <summary>
         /// Gets statistics about chunk mesh and collider sizes.
         /// </summary>
