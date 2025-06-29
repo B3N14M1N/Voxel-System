@@ -219,18 +219,15 @@ namespace VoxelSystem.Generators
             if (GenerationData == null)
                 Debug.LogWarning($"ChunkDataGenerator: GenerationData is null.");
 
-            if (chunk != null)
-            {
-                chunk.UploadData(ref Voxels, ref HeightMap);
-                _hasLoaded = true;
-            }
-            else
+            if (chunk == null)
             {
                 Dispose(true);
                 GenerationData.flags = ChunkGenerationFlags.Disposed;
                 return GenerationData;
             }
 
+            chunk.UploadData(ref Voxels, ref HeightMap);
+            _hasLoaded = true;
             GenerationData.flags &= ChunkGenerationFlags.Mesh | ChunkGenerationFlags.Collider;
             Dispose();
             return GenerationData;

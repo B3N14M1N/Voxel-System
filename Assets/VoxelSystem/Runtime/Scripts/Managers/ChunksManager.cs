@@ -70,12 +70,12 @@ namespace VoxelSystem.Managers
 
             // Initialize the chunk save system
             ChunkSaveSystem.Initialize();
-            
+
             // Set up event handlers for world changes
             WorldSettings.OnWorldSettingsChanged += GenerateChunksPositionsCheck;
             WorldSettings.OnWorldChanged += Dispose;
             WorldSettings.OnWorldChanged += GenerateChunksPositionsCheck;
-            
+
             // Initialize the save system again when world settings change
             WorldSettings.OnWorldChanged += ChunkSaveSystem.Initialize;
 
@@ -87,6 +87,7 @@ namespace VoxelSystem.Managers
         /// </summary>
         public void GenerateChunksPositionsCheck()
         {
+            ChunkFactory.Instance.GenerateChunksData(new());
             var job = new ChunksRenderView(Vector3.zero, PlayerSettings.RenderDistance);
             _chunksPositionCheck = job.Complete();
             job.Dispose();
@@ -256,6 +257,16 @@ namespace VoxelSystem.Managers
             }
         }
 
+        public void DisposeGeneratingChunk(Vector3 pos)
+        {
+            if (_generating.TryGetValue(pos, out Chunk chunk))
+            {
+                chunk.Active = false;
+                chunk.Render = false;
+                _cached.Add(pos, chunk);
+                _generating.Remove(pos);
+            }
+        }
         /// <inheritdoc/>
         public Voxel GetVoxel(int x, int y, int z)
         {
@@ -462,7 +473,7 @@ namespace VoxelSystem.Managers
                     _chunksToClear.Dequeue().Dispose();
                     continue;
                 }
-                
+
                 ClearChunkAndEnqueue(_chunksToClear.Dequeue());
                 await UniTask.Yield();
             }
@@ -512,6 +523,7 @@ namespace VoxelSystem.Managers
             GC.Collect();
 #endif
         }
+
         ~ChunksManager()
         {
             WorldSettings.OnWorldSettingsChanged -= GenerateChunksPositionsCheck;

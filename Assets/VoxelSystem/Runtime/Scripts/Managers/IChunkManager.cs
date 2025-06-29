@@ -46,6 +46,12 @@ namespace VoxelSystem.Managers
         void CompleteGeneratingChunk(Vector3 pos);
 
         /// <summary>
+        /// Dispose the generating chunk.
+        /// </summary>
+        /// <param name="pos"></param>
+        void DisposeGeneratingChunk(Vector3 pos);
+        
+        /// <summary>
         /// Gets statistics about chunk mesh and collider sizes.
         /// </summary>
         /// <returns>A tuple containing vertex and index counts for meshes and colliders</returns>

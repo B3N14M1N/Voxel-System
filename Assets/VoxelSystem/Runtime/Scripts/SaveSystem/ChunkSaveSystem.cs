@@ -36,6 +36,9 @@ namespace VoxelSystem.SaveSystem
         // Compression level for chunk saves (None, Fastest, Optimal)
         private static readonly CompressionLevel _compressionLevel = CompressionLevel.Fastest;
 
+        // Queue of files to be deleted when it's safe to do so
+        private static readonly ConcurrentQueue<string> _filesToDelete = new ConcurrentQueue<string>();
+
         /// <summary>
         /// Gets the path for a chunk file based on its position.
         /// </summary>
@@ -375,6 +378,16 @@ namespace VoxelSystem.SaveSystem
             NativeArray<Voxel> voxels = default;
             NativeArray<HeightMap> heightMap = default;
 
+            // Check if file is empty or too small to be valid
+            FileInfo fileInfo = new FileInfo(filePath);
+            if (fileInfo.Length < 20) // Minimum size for a valid chunk file
+            {
+                Debug.LogWarning($"Chunk file is too small or empty: {filePath}, size: {fileInfo.Length} bytes");
+                // Schedule file for deletion rather than deleting immediately
+                ScheduleFileForDeletion(filePath);
+                return new ChunkLoadResult(false);
+            }
+
             using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
                    bufferSize: 4096, useAsync: true))
             using (var decompressStream = new GZipStream(fileStream, CompressionMode.Decompress))
@@ -385,6 +398,17 @@ namespace VoxelSystem.SaveSystem
                     // Read version
                     int version = reader.ReadInt32();
 
+                    // Validate version
+                    if (version != 1)
+                    {
+                        Debug.LogWarning($"Invalid chunk file version: {version} at {filePath}");
+                        DeleteCorruptedFile(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     // Skip position as we already know it
                     reader.ReadSingle(); // x
                     reader.ReadSingle(); // y
@@ -392,12 +416,37 @@ namespace VoxelSystem.SaveSystem
 
                     // Read voxel data
                     int voxelCount = reader.ReadInt32();
+
+                    // Check for unreasonable voxel count (corrupted data)
+                    if (voxelCount <= 0 || voxelCount > WorldSettings.RenderedVoxelsInChunk)
+                    {
+                        Debug.LogWarning($"Invalid voxel count: {voxelCount} at {filePath}. Expected count: {WorldSettings.RenderedVoxelsInChunk}");
+                        ScheduleFileForDeletion(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     voxels = new NativeArray<Voxel>(voxelCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
                     await LoadVoxelDataAsync(reader, voxels, voxelCount);
 
                     // Read height map data
                     int heightMapCount = reader.ReadInt32();
+
+                    int expectedMapCount = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
+                    // Check for unreasonable heightmap count (corrupted data)
+                    if (heightMapCount <= 0 || heightMapCount > expectedMapCount)
+                    {
+                        Debug.LogWarning($"Invalid heightmap count: {heightMapCount} at {filePath}. Expected count: {expectedMapCount}");
+                        ScheduleFileForDeletion(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     heightMap = new NativeArray<HeightMap>(heightMapCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
                     await LoadHeightMapDataAsync(reader, heightMap, heightMapCount);
@@ -410,6 +459,10 @@ namespace VoxelSystem.SaveSystem
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
+
+                    // Schedule file for deletion after handle is closed
+                    ScheduleFileForDeletion(filePath);
+
                     return new(false);
                 }
             }
@@ -423,6 +476,15 @@ namespace VoxelSystem.SaveSystem
             NativeArray<Voxel> voxels = default;
             NativeArray<HeightMap> heightMap = default;
 
+            // Check if file is empty or too small to be valid
+            FileInfo fileInfo = new FileInfo(filePath);
+            if (fileInfo.Length < 20) // Minimum size for a valid chunk file
+            {
+                Debug.LogWarning($"Chunk file is too small or empty: {filePath}, size: {fileInfo.Length} bytes");
+                ScheduleFileForDeletion(filePath);
+                return new ChunkLoadResult(false);
+            }
+
             using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var decompressStream = new GZipStream(fileStream, CompressionMode.Decompress))
             using (var reader = new BinaryReader(decompressStream))
@@ -432,6 +494,17 @@ namespace VoxelSystem.SaveSystem
                     // Read version
                     int version = reader.ReadInt32();
 
+                    // Validate version
+                    if (version != 1)
+                    {
+                        Debug.LogWarning($"Invalid chunk file version: {version} at {filePath}");
+                        ScheduleFileForDeletion(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     // Skip position as we already know it
                     reader.ReadSingle(); // x
                     reader.ReadSingle(); // y
@@ -439,12 +512,37 @@ namespace VoxelSystem.SaveSystem
 
                     // Read voxel data
                     int voxelCount = reader.ReadInt32();
+
+                    // Check for unreasonable voxel count (corrupted data)
+                    if (voxelCount <= 0 || voxelCount > WorldSettings.RenderedVoxelsInChunk)
+                    {
+                        Debug.LogWarning($"Invalid voxel count: {voxelCount} at {filePath}. Expected count: {WorldSettings.RenderedVoxelsInChunk}");
+                        ScheduleFileForDeletion(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     voxels = new NativeArray<Voxel>(voxelCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
                     LoadVoxelData(reader, ref voxels, voxelCount);
 
                     // Read height map data
                     int heightMapCount = reader.ReadInt32();
+
+                    int expectedMapCount = (WorldSettings.ChunkWidth + 2) * (WorldSettings.ChunkWidth + 2);
+                    // Check for unreasonable heightmap count (corrupted data)
+                    if (heightMapCount <= 0 || heightMapCount > expectedMapCount)
+                    {
+                        Debug.LogWarning($"Invalid heightmap count: {heightMapCount} at {filePath}. Expected count: {expectedMapCount}");
+                        ScheduleFileForDeletion(filePath);
+
+                        if (voxels.IsCreated) voxels.Dispose();
+                        if (heightMap.IsCreated) heightMap.Dispose();
+                        return new ChunkLoadResult(false);
+                    }
+
                     heightMap = new NativeArray<HeightMap>(heightMapCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
                     LoadHeightMapData(reader, ref heightMap, heightMapCount);
@@ -457,6 +555,9 @@ namespace VoxelSystem.SaveSystem
                     // Clean up allocated memory if an error occurs
                     if (voxels.IsCreated) voxels.Dispose();
                     if (heightMap.IsCreated) heightMap.Dispose();
+
+                    // Delete corrupted file
+                    ScheduleFileForDeletion(filePath);
                     return new(false);
                 }
             }
@@ -471,7 +572,7 @@ namespace VoxelSystem.SaveSystem
             {
                 byte value = reader.ReadByte();
                 voxels[i] = new Voxel(value);
-                
+
                 // Every 4096 voxels, allow other operations to proceed
                 if (i % PlayerSettings.VoxelsToLoadFromFile == 0 && i > 0)
                 {
@@ -588,7 +689,7 @@ namespace VoxelSystem.SaveSystem
 
             return count;
         }
-        
+
         /// <summary>
         /// Initializes the chunk save system directory structure.
         /// </summary>
@@ -636,15 +737,70 @@ namespace VoxelSystem.SaveSystem
         public static void Cleanup()
         {
             try
-            {
+            {                    // Process any remaining files to delete
+                    int maxAttempts = 3;
+                    int currentAttempt = 0;
+                    
+                    // Force garbage collection to help release file handles
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    
+                    // Process files in queue with multiple attempts
+                    while (_filesToDelete.Count > 0 && currentAttempt < maxAttempts)
+                    {
+                        int startingCount = _filesToDelete.Count;
+                        int filesProcessed = 0;
+                        
+                        // Try to process all files in the queue
+                        while (_filesToDelete.TryDequeue(out string filePath))
+                        {
+                            try
+                            {
+                                if (File.Exists(filePath))
+                                {
+                                    File.Delete(filePath);
+                                    Debug.Log($"Cleanup: Deleted file {filePath}");
+                                    filesProcessed++;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogWarning($"Cleanup: Failed to delete file {filePath}: {ex.Message}");
+                                // Re-queue the file for the next attempt
+                                _filesToDelete.Enqueue(filePath);
+                            }
+                        }
+                        
+                        // If we couldn't delete any files this attempt, try a GC and wait
+                        if (filesProcessed == 0 && _filesToDelete.Count == startingCount)
+                        {
+                            currentAttempt++;
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                            Thread.Sleep(200); // Wait a bit before next attempt
+                        }
+                        else
+                        {
+                            // Reset attempts if we made progress
+                            currentAttempt = 0;
+                        }
+                    }
+                    
+                    // Log any files we couldn't delete after all attempts
+                    if (_filesToDelete.Count > 0)
+                    {
+                        Debug.LogWarning($"Unable to delete {_filesToDelete.Count} files after multiple attempts during cleanup.");
+                        _filesToDelete.Clear(); // Clear the queue anyway to avoid memory leaks
+                    }
+                
                 if (_saveSemaphore != null)
                 {
                     _saveSemaphore.Dispose();
                     _saveSemaphore = null;
                 }
-                
+
                 _chunkModificationCache.Clear();
-                
+
                 if (WorldSettings.HasDebugging)
                     Debug.Log("ChunkSaveSystem cleaned up successfully.");
             }
@@ -652,6 +808,173 @@ namespace VoxelSystem.SaveSystem
             {
                 Debug.LogError($"Error during ChunkSaveSystem cleanup: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Deletes a corrupted chunk file and extracts position from the file path
+        /// </summary>
+        /// <param name="filePath">The path to the corrupted chunk file</param>
+        private static void DeleteCorruptedFile(string filePath)
+        {
+            try
+            {
+                // Extract position from file path to delete the corrupted file
+                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                if (fileName.StartsWith("chunk_"))
+                {
+                    string[] parts = fileName.Substring(6).Split('_');
+                    if (parts.Length == 3 &&
+                        int.TryParse(parts[0], out int x) &&
+                        int.TryParse(parts[1], out int y) &&
+                        int.TryParse(parts[2], out int z))
+                    {
+                        Vector3 position = new Vector3(x, y, z);
+                        Debug.LogWarning($"Deleting corrupted chunk file at position {position}");
+                        DeleteChunkSave(position);
+                    }
+                    else
+                    {
+                        // If we can't parse the position, delete the file directly
+                        if (File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                            Debug.LogWarning($"Directly deleted corrupted chunk file: {filePath}");
+                        }
+                    }
+                }
+                else
+                {
+                    // If filename doesn't follow the expected pattern
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                        Debug.LogWarning($"Directly deleted corrupted chunk file: {filePath}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to delete corrupted chunk file: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Schedules a file for deletion when it's safe to do so (streams are closed)
+        /// </summary>
+        private static void ScheduleFileForDeletion(string filePath)
+        {
+            // Add file to deletion queue
+            _filesToDelete.Enqueue(filePath);
+            
+            // Process the deletion queue if not too many files pending
+            if (_filesToDelete.Count < 20)
+            {
+                ProcessFileDeletionQueue();
+            }
+        }
+        
+        /// <summary>
+        /// Process queued files for deletion
+        /// </summary>
+        private static void ProcessFileDeletionQueue()
+        {
+            // Spawn a task to handle the deletion to avoid blocking
+            _ = UniTask.RunOnThreadPool(async () =>
+            {
+                try
+                {
+                    // Wait briefly to ensure file handles are closed
+                    await UniTask.Delay(250); // Increased delay to give more time for handles to close
+                    
+                    // Force garbage collection to release file handles
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    
+                    int maxAttempts = 3;
+                    int batchSize = 10; // Process files in batches
+                    List<string> batch = new List<string>(batchSize);
+                    
+                    // Get a batch of files to process
+                    for (int i = 0; i < batchSize && _filesToDelete.TryDequeue(out string path); i++)
+                    {
+                        batch.Add(path);
+                    }
+                    
+                    // Process each file in the batch
+                    foreach (var filePath in batch)
+                    {
+                        bool deleted = false;
+                        
+                        for (int attempt = 0; attempt < maxAttempts && !deleted; attempt++)
+                        {
+                            try
+                            {
+                                if (File.Exists(filePath))
+                                {
+                                    // Extract position from file path
+                                    string fileName = Path.GetFileNameWithoutExtension(filePath);
+                                    if (fileName.StartsWith("chunk_"))
+                                    {
+                                        string[] parts = fileName.Substring(6).Split('_');
+                                        if (parts.Length == 3 &&
+                                            int.TryParse(parts[0], out int x) &&
+                                            int.TryParse(parts[1], out int y) &&
+                                            int.TryParse(parts[2], out int z))
+                                        {
+                                            Vector3 position = new Vector3(x, y, z);
+                                            string chunkFilePath = GetChunkFilePath(position);
+                                            
+                                            // Remove from cache
+                                            _chunkModificationCache.TryRemove(chunkFilePath, out _);
+                                        }
+                                    }
+                                    
+                                    // Direct delete using File.Delete
+                                    File.Delete(filePath);
+                                    Debug.Log($"Successfully deleted file: {filePath}");
+                                    deleted = true;
+                                }
+                                else
+                                {
+                                    // File doesn't exist anymore, consider it deleted
+                                    deleted = true;
+                                }
+                            }
+                            catch (IOException ex)
+                            {
+                                if (attempt == maxAttempts - 1)
+                                {
+                                    Debug.LogWarning($"Failed to delete file {filePath} after {maxAttempts} attempts: {ex.Message}");
+                                    _filesToDelete.Enqueue(filePath); // Re-queue for later
+                                }
+                                else
+                                {
+                                    // Try again after waiting
+                                    await UniTask.Delay(100 * (attempt + 1)); // Exponential backoff
+                                    GC.Collect();
+                                    GC.WaitForPendingFinalizers();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogError($"Error deleting file {filePath}: {ex.Message}");
+                                deleted = true; // Don't retry on non-IO exceptions
+                            }
+                        }
+                    }
+                    
+                    // If there are more files and we didn't hit an error, process the next batch
+                    if (_filesToDelete.Count > 0)
+                    {
+                        await UniTask.Delay(100); // Brief delay before next batch
+                        ProcessFileDeletionQueue();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error in file deletion queue processing: {ex.Message}");
+                }
+            });
         }
     }
 }

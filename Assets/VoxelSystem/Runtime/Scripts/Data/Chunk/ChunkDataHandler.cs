@@ -71,7 +71,7 @@ namespace VoxelSystem.Data.Chunk
 
             if (!newVoxels.IsCreated || newVoxels.Length != expectedVoxelLength)
             {
-                Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}.");
+                Debug.LogError($"ChunkDataHandler: Incorrect voxel array length. Expected {expectedVoxelLength}, got {newVoxels.Length}. at chunk {Position}");
                 sizeMismatch = true;
             }
 
